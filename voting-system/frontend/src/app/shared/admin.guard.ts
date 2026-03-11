@@ -1,9 +1,11 @@
-import * as jwt_decode from 'jwt-decode';
 import { CanActivateFn, Router } from '@angular/router';
+import { inject } from '@angular/core';
+import * as jwt_decode from 'jwt-decode';
 
 export const AdminGuard: CanActivateFn = (route, state) => {
+
+  const router = inject(Router);
   const token = localStorage.getItem('token');
-  const router = new Router();
 
   if (!token) {
     alert('You must log in!');
@@ -13,11 +15,13 @@ export const AdminGuard: CanActivateFn = (route, state) => {
 
   try {
     const decoded: any = (jwt_decode as any)(token);
+
     if (decoded.role !== 'admin') {
       alert('Access denied! Admins only.');
       router.navigate(['/']);
       return false;
     }
+
   } catch (err) {
     console.error('Invalid token', err);
     router.navigate(['/login']);
