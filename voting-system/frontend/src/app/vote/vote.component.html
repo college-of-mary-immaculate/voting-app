@@ -1,0 +1,22 @@
+<div class="vote-container">
+  <div class="vote-card">
+    <h2>Vote Confirmation</h2>
+    <p *ngIf="candidateId" class="candidate-info">
+      You are about to vote for candidate ID: {{ candidateId }}
+    </p>
+    <p *ngIf="!candidateId" class="error">
+      No candidate selected. Please select a candidate first.
+    </p>
+    <div class="actions">
+      <button 
+        (click)="confirmVote()" 
+        [disabled]="!candidateId"
+        class="btn-confirm">
+        Confirm Vote
+      </button>
+      <button (click)="cancel()" class="btn-cancel">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
