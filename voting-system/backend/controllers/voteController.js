@@ -1,7 +1,6 @@
 const db = require("../config/db");
 
 exports.vote = (req, res) => {
-
   const user_id = req.user.id;
   const { candidate_id, election_id } = req.body;
 
@@ -11,10 +10,7 @@ exports.vote = (req, res) => {
   `;
 
   db.query(checkVote, [user_id, election_id], (err, result) => {
-
-    if (err) {
-      return res.status(500).json(err);
-    }
+    if (err) return res.status(500).json(err);
 
     if (result.length > 0) {
       return res.status(400).json({
@@ -28,17 +24,29 @@ exports.vote = (req, res) => {
     `;
 
     db.query(insertVote, [user_id, candidate_id, election_id], (err) => {
-
-      if (err) {
-        return res.status(500).json(err);
-      }
+      if (err) return res.status(500).json(err);
 
       res.json({
         message: "Vote recorded successfully"
       });
-
     });
-
   });
+};
 
+exports.checkVote = (req, res) => {
+  const user_id = req.user.id;
+  const election_id = req.params.electionId;
+
+  const sql = `
+    SELECT * FROM votes
+    WHERE user_id = ? AND election_id = ?
+  `;
+
+  db.query(sql, [user_id, election_id], (err, result) => {
+    if (err) return res.status(500).json(err);
+
+    res.json({
+      voted: result.length > 0
+    });
+  });
 };

@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { Bar } from "react-chartjs-2";
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
 import { getResults, getElections } from "../api/api";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -10,9 +18,11 @@ function Results() {
   const [selectedElection, setSelectedElection] = useState("");
   const [results, setResults] = useState([]);
 
-  // Fetch elections on mount
+  // Fetch elections from backend
   useEffect(() => {
-    getElections().then(setElections).catch(console.error);
+    getElections()
+      .then(setElections)
+      .catch((err) => console.error("Failed to fetch elections:", err));
   }, []);
 
   // Fetch results when an election is selected
@@ -20,7 +30,7 @@ function Results() {
     if (selectedElection) {
       getResults(selectedElection)
         .then(setResults)
-        .catch(console.error);
+        .catch((err) => console.error("Failed to fetch results:", err));
     } else {
       setResults([]);
     }
@@ -50,7 +60,7 @@ function Results() {
           <option value="">-- Select Election --</option>
           {elections.map((e) => (
             <option key={e.id} value={e.id}>
-              {e.name} ({e.date})
+              {e.title} ({e.start_date} to {e.end_date})
             </option>
           ))}
         </select>
@@ -61,7 +71,7 @@ function Results() {
       ) : selectedElection ? (
         <p>No votes yet.</p>
       ) : (
-        <p>Please select an election.</p>
+        <p>Please select an election to see results.</p>
       )}
     </div>
   );
