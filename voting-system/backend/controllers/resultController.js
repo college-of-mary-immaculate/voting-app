@@ -1,70 +1,27 @@
-import { useEffect, useState } from "react";
-import { Bar } from "react-chartjs-2";
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js";
-import { getResults, getElections } from "../api/api";
+const db = require("../config/db");
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+// Get results for a specific election
+exports.getResults = (req, res) => {
+  const electionId = req.params.electionId;
 
-function Results() {
-  const [elections, setElections] = useState([]);
-  const [selectedElection, setSelectedElection] = useState("");
-  const [results, setResults] = useState([]);
+  const sql = `
+    SELECT
+      c.id AS candidate_id,
+      c.name AS candidate,
+      COUNT(v.id) AS votes
+    FROM candidates c
+    LEFT JOIN votes v
+      ON c.id = v.candidate_id AND v.election_id = ?
+    WHERE c.election_id = ?
+    GROUP BY c.id
+  `;
 
-  // Fetch elections on mount
-  useEffect(() => {
-    getElections().then(setElections).catch(console.error);
-  }, []);
-
-  // Fetch results when an election is selected
-  useEffect(() => {
-    if (selectedElection) {
-      getResults(selectedElection)
-        .then(setResults)
-        .catch(console.error);
-    } else {
-      setResults([]);
+  db.query(sql, [electionId, electionId], (err, result) => {
+    if (err) {
+      console.error("Error fetching results:", err);
+      return res.status(500).json({ message: "Server error", error: err });
     }
-  }, [selectedElection]);
 
-  const chartData = {
-    labels: results.map((r) => r.candidate),
-    datasets: [
-      {
-        label: "# of Votes",
-        data: results.map((r) => r.votes),
-        backgroundColor: "rgba(75,192,192,0.6)",
-      },
-    ],
-  };
-
-  return (
-    <div>
-      <h2>Election Results</h2>
-
-      <div style={{ marginBottom: "20px" }}>
-        <label>Select Election: </label>
-        <select
-          value={selectedElection}
-          onChange={(e) => setSelectedElection(e.target.value)}
-        >
-          <option value="">-- Select Election --</option>
-          {elections.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.name} ({e.date})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {results.length > 0 ? (
-        <Bar data={chartData} />
-      ) : selectedElection ? (
-        <p>No votes yet.</p>
-      ) : (
-        <p>Please select an election.</p>
-      )}
-    </div>
-  );
-}
-
-export default Results;
+    res.json(result);
+  });
+};

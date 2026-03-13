@@ -10,6 +10,7 @@ const resultRoutes = require("./routes/resultRoutes");
 const adminCandidateRoutes = require("./routes/adminCandidateRoutes");
 const adminElectionRoutes = require("./routes/adminElectionRoutes");
 const adminPositionRoutes = require("./routes/adminPositionRoutes");
+const electionRoutes = require("./routes/electionRoutes");
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use("/api/admin/candidates", adminCandidateRoutes);
 app.use("/api/admin/elections", adminElectionRoutes);
 app.use("/uploads", express.static("uploads"));
 app.use("/api/admin/positions", adminPositionRoutes);
+app.use("/api/elections", electionRoutes);
 
 app.get("/", (req, res) => {
   res.send("Voting API is running");
