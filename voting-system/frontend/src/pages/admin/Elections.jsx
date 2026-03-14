@@ -96,7 +96,32 @@ function Elections({ elections, refresh }) {
         body: JSON.stringify({
           title: election.title,
           start_date: election.start_date,
-          end_date: new Date().toISOString().split("T")[0],
+          end_date: new Date().toISOString(), // end now
+        }),
+      }
+    );
+
+    const data = await res.json();
+    alert(data.message);
+
+    refresh();
+  };
+
+  const handleStartElection = async (election) => {
+    if (!window.confirm("Start this election now?")) return;
+
+    const res = await fetch(
+      `http://localhost:3000/api/admin/elections/${election.id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: election.title,
+          start_date: new Date().toISOString(), // start now
+          end_date: election.end_date,
         }),
       }
     );
@@ -117,23 +142,19 @@ function Elections({ elections, refresh }) {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-
         <input
           type="date"
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
         />
-
         <input
           type="date"
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
         />
-
         <button onClick={handleAddOrUpdate}>
           {editId ? "Update Election" : "Add Election"}
         </button>
-
         {editId && <button onClick={resetForm}>Cancel</button>}
       </div>
 
@@ -155,16 +176,17 @@ function Elections({ elections, refresh }) {
             return (
               <tr key={e.id}>
                 <td>{e.title}</td>
-                <td>{e.start_date}</td>
-                <td>{e.end_date}</td>
+                <td>{new Date(e.start_date).toLocaleString()}</td>
+                <td>{new Date(e.end_date).toLocaleString()}</td>
                 <td>{status}</td>
 
                 <td>
                   {status === "Upcoming" && (
                     <>
                       <button onClick={() => handleEdit(e)}>Edit</button>
-                      <button onClick={() => handleDelete(e.id)}>
-                        Delete
+                      <button onClick={() => handleDelete(e.id)}>Delete</button>
+                      <button onClick={() => handleStartElection(e)}>
+                        Start Now
                       </button>
                     </>
                   )}

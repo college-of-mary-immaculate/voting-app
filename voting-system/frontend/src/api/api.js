@@ -26,21 +26,18 @@ export const register = async (name, email, password) => {
 // PUBLIC APIs (NO TOKEN)
 //////////////////////////////////////////
 
-// Elections list for users
 export const getElections = async () => {
   const res = await fetch(`${API_URL}/api/elections`);
   if (!res.ok) throw new Error(`Failed to fetch elections: ${res.status}`);
   return res.json();
 };
 
-// Candidates for a specific election
 export const getCandidatesByElection = async (electionId) => {
   const res = await fetch(`${API_URL}/api/elections/${electionId}/candidates`);
   if (!res.ok) throw new Error(`Failed to fetch candidates: ${res.status}`);
   return res.json();
 };
 
-// Election results
 export const getResults = async (electionId) => {
   const res = await fetch(`${API_URL}/api/results/${electionId}`);
   if (!res.ok) throw new Error("Failed to fetch results");
@@ -62,6 +59,24 @@ export const voteCandidate = async (candidate_id, election_id) => {
     },
     body: JSON.stringify({ candidate_id, election_id }),
   });
+
+  return res.json();
+};
+
+//////////////////////////////////////////
+// CHECK IF USER ALREADY VOTED
+//////////////////////////////////////////
+
+export const checkVote = async (electionId) => {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(`${API_URL}/api/vote/check/${electionId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) throw new Error("Failed to check vote");
 
   return res.json();
 };

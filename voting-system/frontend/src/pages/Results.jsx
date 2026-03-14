@@ -18,14 +18,14 @@ function Results() {
   const [selectedElection, setSelectedElection] = useState("");
   const [results, setResults] = useState([]);
 
-  // Fetch elections from backend
+  // Fetch elections
   useEffect(() => {
     getElections()
       .then(setElections)
       .catch((err) => console.error("Failed to fetch elections:", err));
   }, []);
 
-  // Fetch results when an election is selected
+  // Fetch results for selected election
   useEffect(() => {
     if (selectedElection) {
       getResults(selectedElection)
@@ -36,16 +36,13 @@ function Results() {
     }
   }, [selectedElection]);
 
-  const chartData = {
-    labels: results.map((r) => r.candidate),
-    datasets: [
-      {
-        label: "# of Votes",
-        data: results.map((r) => r.votes),
-        backgroundColor: "rgba(75,192,192,0.6)",
-      },
-    ],
-  };
+  // Group results by position
+  const resultsByPosition = results.reduce((acc, r) => {
+    const pos = r.position || "Unknown Position";
+    if (!acc[pos]) acc[pos] = [];
+    acc[pos].push(r);
+    return acc;
+  }, {});
 
   return (
     <div>
@@ -66,10 +63,30 @@ function Results() {
         </select>
       </div>
 
-      {results.length > 0 ? (
-        <Bar data={chartData} />
-      ) : selectedElection ? (
-        <p>No votes yet.</p>
+      {selectedElection ? (
+        Object.keys(resultsByPosition).length > 0 ? (
+          Object.entries(resultsByPosition).map(([position, candidates]) => {
+            const chartData = {
+              labels: candidates.map((c) => c.candidate),
+              datasets: [
+                {
+                  label: "# of Votes",
+                  data: candidates.map((c) => c.votes),
+                  backgroundColor: "rgba(75,192,192,0.6)",
+                },
+              ],
+            };
+
+            return (
+              <div key={position} style={{ marginBottom: "40px" }}>
+                <h3>{position}</h3>
+                <Bar data={chartData} />
+              </div>
+            );
+          })
+        ) : (
+          <p>No votes yet.</p>
+        )
       ) : (
         <p>Please select an election to see results.</p>
       )}
