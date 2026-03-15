@@ -10,6 +10,7 @@ export const login = async (email, password) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
+
   return res.json();
 };
 
@@ -19,22 +20,23 @@ export const register = async (name, email, password) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email, password }),
   });
+
   return res.json();
 };
 
 //////////////////////////////////////////
-// PUBLIC APIs (NO TOKEN)
+// PUBLIC APIs
 //////////////////////////////////////////
 
 export const getElections = async () => {
   const res = await fetch(`${API_URL}/api/elections`);
-  if (!res.ok) throw new Error(`Failed to fetch elections: ${res.status}`);
+  if (!res.ok) throw new Error("Failed to fetch elections");
   return res.json();
 };
 
 export const getCandidatesByElection = async (electionId) => {
   const res = await fetch(`${API_URL}/api/elections/${electionId}/candidates`);
-  if (!res.ok) throw new Error(`Failed to fetch candidates: ${res.status}`);
+  if (!res.ok) throw new Error("Failed to fetch candidates");
   return res.json();
 };
 
@@ -45,7 +47,7 @@ export const getResults = async (electionId) => {
 };
 
 //////////////////////////////////////////
-// USER ACTIONS (TOKEN REQUIRED)
+// USER ACTIONS
 //////////////////////////////////////////
 
 export const voteCandidate = async (candidate_id, election_id) => {
@@ -60,11 +62,17 @@ export const voteCandidate = async (candidate_id, election_id) => {
     body: JSON.stringify({ candidate_id, election_id }),
   });
 
-  return res.json();
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "Vote failed");
+  }
+
+  return data;
 };
 
 //////////////////////////////////////////
-// CHECK IF USER ALREADY VOTED
+// CHECK USER VOTES
 //////////////////////////////////////////
 
 export const checkVote = async (electionId) => {
@@ -76,13 +84,17 @@ export const checkVote = async (electionId) => {
     },
   });
 
-  if (!res.ok) throw new Error("Failed to check vote");
+  const data = await res.json();
 
-  return res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to check vote");
+  }
+
+  return data;
 };
 
 //////////////////////////////////////////
-// ADMIN APIs (TOKEN REQUIRED)
+// ADMIN
 //////////////////////////////////////////
 
 export const getAdminElections = async () => {
@@ -92,6 +104,7 @@ export const getAdminElections = async () => {
     headers: { Authorization: `Bearer ${token}` },
   });
 
-  if (!res.ok) throw new Error(`Failed to fetch elections: ${res.status}`);
+  if (!res.ok) throw new Error("Failed to fetch elections");
+
   return res.json();
 };

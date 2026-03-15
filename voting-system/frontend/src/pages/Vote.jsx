@@ -8,22 +8,28 @@ import {
 
 function Vote() {
   const [elections, setElections] = useState([]);
-  const [selectedElection, setSelectedElection] = useState("");
+  const [selectedElection, setSelectedElection] = useState(null);
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [voting, setVoting] = useState(false);
 
-  // Track positions already voted
+  // Track votes per position (store candidate id)
   const [votedPositions, setVotedPositions] = useState({});
 
+  //////////////////////////////////////////
   // Fetch elections on mount
+  //////////////////////////////////////////
   useEffect(() => {
     getElections()
-      .then(setElections)
+      .then((data) => {
+        setElections(data);
+      })
       .catch((err) => console.error("Failed to fetch elections:", err));
   }, []);
 
-  // Fetch candidates and already voted positions when election is selected
+  //////////////////////////////////////////
+  // Fetch candidates + user votes when election changes
+  //////////////////////////////////////////
   useEffect(() => {
     if (!selectedElection) {
       setCandidates([]);
@@ -34,16 +40,16 @@ function Vote() {
     setLoading(true);
 
     Promise.all([
-      getCandidatesByElection(selectedElection),
-      checkVote(selectedElection),
+      getCandidatesByElection(selectedElection.id),
+      checkVote(selectedElection.id),
     ])
       .then(([candidateData, votedData]) => {
         setCandidates(candidateData);
 
-        // Map positions to prevent voting again
+        // Map positions → candidate id
         const votedMap = {};
         votedData.votedPositions.forEach((posId) => {
-          votedMap[posId] = true;
+          votedMap[posId] = true; // store that user voted for this position
         });
         setVotedPositions(votedMap);
       })
@@ -51,15 +57,35 @@ function Vote() {
       .finally(() => setLoading(false));
   }, [selectedElection]);
 
+  //////////////////////////////////////////
   // Group candidates by position name
+  //////////////////////////////////////////
   const groupedCandidates = candidates.reduce((acc, c) => {
-    const pos = c.position || "Unknown Position";
-    if (!acc[pos]) acc[pos] = [];
-    acc[pos].push(c);
+    const posName = c.position || "Unknown Position";
+    if (!acc[posName]) acc[posName] = [];
+    acc[posName].push(c);
     return acc;
   }, {});
 
+  //////////////////////////////////////////
+  // Election status helper
+  //////////////////////////////////////////
+  const isElectionActive = (election) => {
+    const now = new Date();
+    const start = new Date(election.start_date);
+    const end = new Date(election.end_date);
+    return now >= start && now <= end;
+  };
+
+  //////////////////////////////////////////
+  // Handle vote
+  //////////////////////////////////////////
   const handleVote = async (candidate) => {
+    if (!isElectionActive(selectedElection)) {
+      alert("You cannot vote in this election. It is not active.");
+      return;
+    }
+
     const positionId = candidate.position_id;
 
     if (votedPositions[positionId]) {
@@ -69,8 +95,8 @@ function Vote() {
 
     setVoting(true);
     try {
-      const data = await voteCandidate(candidate.id, selectedElection);
-      alert(data.message || "Vote submitted!");
+      const data = await voteCandidate(candidate.id, selectedElection.id);
+      alert(data.message || "Vote recorded!");
 
       setVotedPositions((prev) => ({
         ...prev,
@@ -78,27 +104,37 @@ function Vote() {
       }));
     } catch (err) {
       console.error(err);
-      alert("Failed to submit vote.");
+      alert(err.message || "Failed to submit vote.");
     } finally {
       setVoting(false);
     }
   };
 
+  //////////////////////////////////////////
+  // Render
+  //////////////////////////////////////////
   return (
     <div>
       <h2>Vote</h2>
 
+      {/* Election selector */}
       <div style={{ marginBottom: "20px" }}>
         <label>Select Election: </label>
         <select
-          value={selectedElection}
-          onChange={(e) => setSelectedElection(e.target.value)}
+          value={selectedElection?.id || ""}
+          onChange={(e) =>
+            setSelectedElection(
+              elections.find((el) => el.id === Number(e.target.value)) || null
+            )
+          }
         >
           <option value="">-- Select Election --</option>
           {elections.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.title} ({new Date(e.start_date).toLocaleDateString()} to{" "}
+            <option key={e.id} value={e.id} disabled={!isElectionActive(e)}>
+              {e.title} (
+              {new Date(e.start_date).toLocaleDateString()} -{" "}
               {new Date(e.end_date).toLocaleDateString()})
+              {!isElectionActive(e) ? " (Not Active)" : ""}
             </option>
           ))}
         </select>
@@ -106,7 +142,7 @@ function Vote() {
 
       {loading && <p>Loading candidates...</p>}
 
-      {!loading && !candidates.length && selectedElection && (
+      {!loading && selectedElection && !candidates.length && (
         <p>No candidates available for this election.</p>
       )}
 
@@ -115,21 +151,26 @@ function Vote() {
           <div key={position} style={{ marginBottom: "30px" }}>
             <h3>{position}</h3>
             {groupedCandidates[position].map((c) => {
-              const voted = votedPositions[c.position_id];
+              const votedCandidateId = votedPositions[c.position_id];
+              const alreadyVotedThis = votedCandidateId === c.id;
+              const isVotedOtherCandidate =
+                votedCandidateId && votedCandidateId !== c.id;
+
               return (
                 <div
                   key={c.id}
                   style={{
-                    border: "1px solid gray",
-                    margin: "10px 0",
-                    padding: "10px",
-                    borderRadius: "5px",
                     display: "flex",
-                    alignItems: "center",
                     gap: "15px",
-                    opacity: voted && voted !== c.id ? 0.5 : 1,
+                    alignItems: "center",
+                    padding: "10px",
+                    border: "1px solid gray",
+                    borderRadius: "5px",
+                    margin: "10px 0",
+                    opacity: isVotedOtherCandidate ? 0.5 : 1,
                   }}
                 >
+                  {/* Photo */}
                   {c.photo ? (
                     <img
                       src={`http://localhost:3000/uploads/${c.photo}`}
@@ -144,8 +185,8 @@ function Vote() {
                         height: "80px",
                         background: "#eee",
                         display: "flex",
-                        alignItems: "center",
                         justifyContent: "center",
+                        alignItems: "center",
                         borderRadius: "5px",
                         fontSize: "12px",
                       }}
@@ -154,19 +195,23 @@ function Vote() {
                     </div>
                   )}
 
+                  {/* Info */}
                   <div style={{ flex: 1 }}>
                     <h4 style={{ margin: 0 }}>{c.name}</h4>
-                    <p style={{ margin: "5px 0" }}>
-                      Party: {c.party || "N/A"}
-                    </p>
+                    <p style={{ margin: "5px 0" }}>Party: {c.party || "N/A"}</p>
                   </div>
 
-                  {voted === c.id ? (
+                  {/* Button */}
+                  {alreadyVotedThis ? (
                     <button disabled>Voted ✓</button>
                   ) : (
                     <button
                       onClick={() => handleVote(c)}
-                      disabled={voting || voted}
+                      disabled={
+                        voting ||
+                        isVotedOtherCandidate ||
+                        !isElectionActive(selectedElection)
+                      }
                     >
                       {voting ? "Voting..." : "Vote"}
                     </button>

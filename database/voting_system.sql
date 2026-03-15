@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 14, 2026 at 12:39 AM
+-- Generation Time: Mar 15, 2026 at 06:06 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -42,10 +42,10 @@ CREATE TABLE `candidates` (
 --
 
 INSERT INTO `candidates` (`id`, `election_id`, `name`, `party`, `photo`, `created_at`, `position_id`) VALUES
-(17, 2, 'Vince', 'Hedric', NULL, '2026-03-12 05:18:49', 1),
-(18, 2, 'Hedric', 'Vince', NULL, '2026-03-12 05:26:58', 1),
-(19, 2, 'Hellos', 'Hello', 'photo-1773315342271.jpg', '2026-03-12 05:32:32', 1),
-(21, 3, 'test', 'test', 'photo-1773308715698.jpg', '2026-03-12 09:45:15', 2);
+(1, 1, 'P One', 'One', NULL, '2026-03-15 01:42:55', 1),
+(2, 1, 'P Two', 'Two', NULL, '2026-03-15 01:43:13', 1),
+(3, 1, 'VP One', 'One', NULL, '2026-03-15 01:47:11', 2),
+(4, 1, 'VP Two', 'Two', NULL, '2026-03-15 01:47:23', 2);
 
 -- --------------------------------------------------------
 
@@ -67,10 +67,7 @@ CREATE TABLE `elections` (
 --
 
 INSERT INTO `elections` (`id`, `title`, `description`, `start_date`, `end_date`, `status`) VALUES
-(1, 'Student Council 2026', 'Election for the student council positions', '2026-03-10 08:00:00', '2026-03-15 17:00:00', 'upcoming'),
-(2, 'Club President Election', 'Election for club presidents', '2026-03-11 09:00:00', '2026-03-20 18:00:00', 'upcoming'),
-(3, 'test', NULL, '2026-03-11 16:00:00', '2026-03-12 00:00:00', NULL),
-(7, 'testing again', '', '2026-03-12 00:00:00', '2026-03-13 00:00:00', 'upcoming');
+(1, 'SSG', '', '2026-03-16 00:00:00', '2026-03-17 00:00:00', 'upcoming');
 
 -- --------------------------------------------------------
 
@@ -90,9 +87,8 @@ CREATE TABLE `positions` (
 --
 
 INSERT INTO `positions` (`id`, `election_id`, `name`, `created_at`) VALUES
-(1, 2, 'President', '2026-03-12 03:53:31'),
-(2, 3, 'Test', '2026-03-12 09:44:31'),
-(4, 2, 'Vice', '2026-03-13 18:45:34');
+(1, 1, 'President', '2026-03-15 01:39:10'),
+(2, 1, 'Vice President', '2026-03-15 01:42:34');
 
 -- --------------------------------------------------------
 
@@ -128,15 +124,17 @@ CREATE TABLE `votes` (
   `user_id` int(11) DEFAULT NULL,
   `candidate_id` int(11) DEFAULT NULL,
   `election_id` int(11) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `position_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `votes`
 --
 
-INSERT INTO `votes` (`id`, `user_id`, `candidate_id`, `election_id`, `created_at`) VALUES
-(2, 2, 17, 2, '2026-03-13 18:44:30');
+INSERT INTO `votes` (`id`, `user_id`, `candidate_id`, `election_id`, `created_at`, `position_id`) VALUES
+(1, 2, 4, 1, '2026-03-15 02:21:05', 2),
+(3, 2, 1, 1, '2026-03-15 02:26:41', 1);
 
 --
 -- Indexes for dumped tables
@@ -175,7 +173,7 @@ ALTER TABLE `users`
 --
 ALTER TABLE `votes`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `unique_vote` (`user_id`,`election_id`),
+  ADD UNIQUE KEY `unique_vote_position` (`user_id`,`election_id`,`position_id`),
   ADD KEY `candidate_id` (`candidate_id`),
   ADD KEY `election_id` (`election_id`);
 
@@ -187,19 +185,19 @@ ALTER TABLE `votes`
 -- AUTO_INCREMENT for table `candidates`
 --
 ALTER TABLE `candidates`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `elections`
 --
 ALTER TABLE `elections`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `positions`
 --
 ALTER TABLE `positions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -211,7 +209,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `votes`
 --
 ALTER TABLE `votes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- Constraints for dumped tables

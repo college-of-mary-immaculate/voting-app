@@ -77,10 +77,30 @@ function Results() {
               ],
             };
 
+            const chartOptions = {
+              indexAxis: "y", // horizontal bars
+              responsive: true,
+              plugins: {
+                legend: { position: "top" },
+                title: { display: true, text: `${position} Results` },
+              },
+              scales: {
+                x: {
+                  beginAtZero: true,
+                  ticks: {
+                    stepSize: 1, // increments by 1
+                  },
+                },
+                y: {
+                  beginAtZero: true,
+                },
+              },
+            };
+
             return (
               <div key={position} style={{ marginBottom: "40px" }}>
                 <h3>{position}</h3>
-                <Bar data={chartData} />
+                <Bar data={chartData} options={chartOptions} />
               </div>
             );
           })
