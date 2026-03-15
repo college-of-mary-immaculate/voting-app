@@ -8,6 +8,9 @@ const candidateRoutes = require("./routes/candidateRoutes");
 const voteRoutes = require("./routes/voteRoutes");
 const resultRoutes = require("./routes/resultRoutes");
 const adminCandidateRoutes = require("./routes/adminCandidateRoutes");
+const adminElectionRoutes = require("./routes/adminElectionRoutes");
+const adminPositionRoutes = require("./routes/adminPositionRoutes");
+const electionRoutes = require("./routes/electionRoutes");
 
 const app = express();
 
@@ -40,11 +43,14 @@ const specs = swaggerJsdoc(options);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 
 app.use("/api/auth", authRoutes);
-app.use("/api/candidates", candidateRoutes);
+app.use("/candidates", candidateRoutes);
 app.use("/api/vote", voteRoutes);
 app.use("/api/results", resultRoutes);
 app.use("/api/admin/candidates", adminCandidateRoutes);
-app.use('/uploads', express.static('uploads'));
+app.use("/api/admin/elections", adminElectionRoutes);
+app.use("/uploads", express.static("uploads"));
+app.use("/api/admin/positions", adminPositionRoutes);
+app.use("/api/elections", electionRoutes);
 
 app.get("/", (req, res) => {
   res.send("Voting API is running");
