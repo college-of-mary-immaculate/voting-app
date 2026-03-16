@@ -1,15 +1,13 @@
 const express = require("express");
 const router = express.Router();
 
-const {
-  getCandidates
-} = require("../controllers/candidateController");
+const { getCandidates } = require("../controllers/candidateController");
 
 /**
  * @swagger
  * tags:
  *   name: Candidates
- *   description: Public candidate information
+ *   description: Public candidate list
  */
 
 /**
@@ -34,9 +32,11 @@ const {
  *                     type: string
  *                   party:
  *                     type: string
- *                   election_id:
- *                     type: integer
  *                   photo:
+ *                     type: string
+ *                   election:
+ *                     type: string
+ *                   position:
  *                     type: string
  */
 
