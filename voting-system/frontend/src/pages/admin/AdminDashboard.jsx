@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
+import AdminLayout from "../../components/AdminLayout";
 import Elections from "./Elections";
 import Positions from "./Positions";
 import Candidates from "./Candidates";
-import AdminLayout from "../../components/AdminLayout";
 
 function AdminDashboard() {
   const [elections, setElections] = useState([]);
@@ -15,21 +15,21 @@ function AdminDashboard() {
   const fetchAllData = async () => {
     try {
       const resE = await fetch("http://localhost:3000/api/admin/elections", {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       setElections(await resE.json());
 
       const resP = await fetch("http://localhost:3000/api/admin/positions", {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       setPositions(await resP.json());
 
       const resC = await fetch("http://localhost:3000/api/admin/candidates", {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       setCandidates(await resC.json());
-    } catch (error) {
-      console.error("Error loading admin data:", error);
+    } catch (err) {
+      console.error("Error fetching data:", err);
     }
   };
 
@@ -37,51 +37,41 @@ function AdminDashboard() {
     fetchAllData();
   }, [refreshCounter]);
 
-  const refresh = () => setRefreshCounter(prev => prev + 1);
+  const refresh = () => setRefreshCounter((prev) => prev + 1);
 
   return (
     <AdminLayout>
+      <div id="dashboard">
+        <h2>Admin Dashboard</h2>
 
-      <h1>Admin Dashboard</h1>
-
-      {/* Dashboard Cards */}
-      <div className="dashboard-cards">
-
-        <div className="card">
-          <h3>Total Elections</h3>
-          <p>{elections.length}</p>
-        </div>
-
-        <div className="card">
-          <h3>Total Positions</h3>
-          <p>{positions.length}</p>
-        </div>
-
-        <div className="card">
-          <h3>Total Candidates</h3>
-          <p>{candidates.length}</p>
-        </div>
-
+        <h3>Total Elections: {elections.length}</h3>
+        <h3>Total Positions: {positions.length}</h3>
+        <h3>Total Candidates: {candidates.length}</h3>
       </div>
 
-      {/* Elections Section */}
-      <div className="section">
+      <div id="elections" style={{ marginTop: "40px" }}>
         <h2>Elections</h2>
-        <Elections elections={elections} refresh={refresh}/>
+        <Elections elections={elections} refresh={refresh} />
       </div>
 
-      {/* Positions Section */}
-      <div className="section">
+      <div id="positions" style={{ marginTop: "40px" }}>
         <h2>Positions</h2>
-        <Positions positions={positions} elections={elections} refresh={refresh}/>
+        <Positions
+          positions={positions}
+          elections={elections}
+          refresh={refresh}
+        />
       </div>
 
-      {/* Candidates Section */}
-      <div className="section">
+      <div id="candidates" style={{ marginTop: "40px" }}>
         <h2>Candidates</h2>
-        <Candidates candidates={candidates} positions={positions} elections={elections} refresh={refresh}/>
+        <Candidates
+          candidates={candidates}
+          positions={positions}
+          elections={elections}
+          refresh={refresh}
+        />
       </div>
-
     </AdminLayout>
   );
 }
