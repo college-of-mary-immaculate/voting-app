@@ -130,7 +130,6 @@ function Elections({ elections, refresh }) {
 
   return (
     <div>
-      <h3>Elections</h3>
 
       <div style={{ marginBottom: "15px" }}>
         <input

@@ -95,7 +95,6 @@ function Candidates({ candidates, positions, elections, refresh }) {
 
   return (
     <div>
-      <h3>Candidates</h3>
 
       {/* FORM */}
       <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "15px" }}>

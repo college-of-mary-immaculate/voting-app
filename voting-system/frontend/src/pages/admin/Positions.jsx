@@ -77,7 +77,6 @@ function Positions({ positions, elections, refresh }) {
 
   return (
     <div>
-      <h3>Positions</h3>
 
       <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "15px" }}>
         <input
