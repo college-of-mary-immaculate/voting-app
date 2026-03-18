@@ -22,7 +22,7 @@ function Register() {
   return (
     <div className="register-page page-section">
       <div className="register-card card">
-        <h2 className="register-title page-title">Create Account</h2>
+        <h2 className="register-title page-title">Create an Account</h2>
         <p className="page-subtitle">Register to participate in the election</p>
 
         <input
