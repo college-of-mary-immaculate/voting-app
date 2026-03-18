@@ -20,10 +20,19 @@ function Candidates({ candidates, positions, elections, refresh }) {
     return "Unknown";
   };
 
-  const resetForm = () => { setName(""); setParty(""); setElectionId(""); setPositionId(""); setPhoto(null); setEditId(null); };
+  const resetForm = () => {
+    setName("");
+    setParty("");
+    setElectionId("");
+    setPositionId("");
+    setPhoto(null);
+    setEditId(null);
+  };
 
   const handleAddOrUpdate = async () => {
-    if (!name || !party || !electionId || !positionId) return alert("Please fill all fields");
+    if (!name || !party || !electionId || !positionId) {
+      return alert("Please fill all fields");
+    }
 
     const formData = new FormData();
     formData.append("name", name);
@@ -34,76 +43,180 @@ function Candidates({ candidates, positions, elections, refresh }) {
 
     let url = "http://localhost:3000/api/admin/candidates";
     let method = "POST";
-    if (editId) { url += `/${editId}`; method = "PUT"; }
 
-    const res = await fetch(url, { method, headers: { Authorization: `Bearer ${token}` }, body: formData });
+    if (editId) {
+      url += `/${editId}`;
+      method = "PUT";
+    }
+
+    const res = await fetch(url, {
+      method,
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+
     const data = await res.json();
     alert(data.message);
+
     resetForm();
     refresh();
   };
 
-  const handleEdit = (c) => { setEditId(c.id); setName(c.name); setParty(c.party); setElectionId(c.election_id); setPositionId(c.position_id); setPhoto(null); };
+  const handleEdit = (c) => {
+    setEditId(c.id);
+    setName(c.name);
+    setParty(c.party);
+    setElectionId(c.election_id);
+    setPositionId(c.position_id);
+    setPhoto(null);
+  };
+
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this candidate?")) return;
-    const res = await fetch(`http://localhost:3000/api/admin/candidates/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+
+    const res = await fetch(
+      `http://localhost:3000/api/admin/candidates/${id}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
     const data = await res.json();
     alert(data.message);
     refresh();
   };
 
-  // Only positions for upcoming elections
   const positionsForElection = electionId
-    ? positions.filter(p => {
-        const e = elections.find(ev => ev.id === parseInt(electionId));
-        return e && getStatus(e.start_date, e.end_date) === "Upcoming" && p.election_id === parseInt(electionId);
-      })
+    ? positions.filter(
+        (p) => p.election_id === parseInt(electionId)
+      )
     : [];
 
   return (
     <div>
       <h3>Candidates</h3>
 
-      <div style={{ marginBottom: "15px" }}>
-        <input placeholder="Name" value={name} onChange={e => setName(e.target.value)} />
-        <input placeholder="Party" value={party} onChange={e => setParty(e.target.value)} />
-        <select value={electionId} onChange={e => { setElectionId(e.target.value); setPositionId(""); }}>
+      {/* FORM */}
+      <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "15px" }}>
+        <input
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+
+        <input
+          placeholder="Party"
+          value={party}
+          onChange={(e) => setParty(e.target.value)}
+        />
+
+        <select
+          value={electionId}
+          onChange={(e) => {
+            setElectionId(e.target.value);
+            setPositionId("");
+          }}
+        >
           <option value="">Select Election</option>
-          {elections.map(e => {
+          {elections.map((e) => {
             const status = getStatus(e.start_date, e.end_date);
-            return <option key={e.id} value={e.id} disabled={status !== "Upcoming"}>{e.title} ({status})</option>
+            return (
+              <option key={e.id} value={e.id}>
+                {e.title} ({status})
+              </option>
+            );
           })}
         </select>
-        <select value={positionId} onChange={e => setPositionId(e.target.value)}>
+
+        <select
+          value={positionId}
+          onChange={(e) => setPositionId(e.target.value)}
+        >
           <option value="">Select Position</option>
-          {positionsForElection.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          {positionsForElection.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
         </select>
-        <input type="file" onChange={e => setPhoto(e.target.files[0])} />
-        <button onClick={handleAddOrUpdate}>{editId ? "Update" : "Add"}</button>
-        {editId && <button onClick={resetForm}>Cancel</button>}
+
+        <input
+          type="file"
+          onChange={(e) => setPhoto(e.target.files[0])}
+        />
+
+        <button className="btn btn-primary" onClick={handleAddOrUpdate}>
+          {editId ? "Update" : "Add"}
+        </button>
+
+        {editId && (
+          <button className="btn btn-delete" onClick={resetForm}>
+            Cancel
+          </button>
+        )}
       </div>
 
-      <table border="1" cellPadding="5">
+
+      <table>
         <thead>
-          <tr><th>Name</th><th>Party</th><th>Election</th><th>Position</th><th>Photo</th><th>Actions</th></tr>
+          <tr>
+            <th>Name</th>
+            <th>Party</th>
+            <th>Election</th>
+            <th>Position</th>
+            <th>Photo</th>
+            <th>Actions</th>
+          </tr>
         </thead>
+
         <tbody>
-          {candidates.map(c => {
-            const election = elections.find(e => e.id === c.election_id);
-            const position = positions.find(p => p.id === c.position_id);
+          {candidates.map((c) => {
+            const election = elections.find(
+              (e) => e.id === c.election_id
+            );
+            const position = positions.find(
+              (p) => p.id === c.position_id
+            );
+
             return (
               <tr key={c.id}>
-                <td>{c.name}</td>
-                <td>{c.party}</td>
-                <td>{election?.title || "Unknown"}</td>
-                <td>{position?.name || "Unknown"}</td>
-                <td>{c.photo && <img src={`http://localhost:3000/uploads/${c.photo}`} width="50" alt={c.name} />}</td>
-                <td>
-                  <button onClick={() => handleEdit(c)}>Edit</button>
-                  <button onClick={() => handleDelete(c.id)}>Delete</button>
+                <td data-label="Name">{c.name}</td>
+                <td data-label="Party">{c.party}</td>
+                <td data-label="Election">
+                  {election?.title || "Unknown"}
+                </td>
+                <td data-label="Position">
+                  {position?.name || "Unknown"}
+                </td>
+                <td data-label="Photo">
+                  {c.photo && (
+                    <img
+                      src={`http://localhost:3000/uploads/${c.photo}`}
+                      width="50"
+                      alt={c.name}
+                      style={{ borderRadius: "6px" }}
+                    />
+                  )}
+                </td>
+
+                <td data-label="Actions">
+                  <button
+                    className="btn btn-edit"
+                    onClick={() => handleEdit(c)}
+                  >
+                    ✏️ Edit
+                  </button>
+
+                  <button
+                    className="btn btn-delete"
+                    onClick={() => handleDelete(c.id)}
+                  >
+                    🗑 Delete
+                  </button>
                 </td>
               </tr>
-            )
+            );
           })}
         </tbody>
       </table>

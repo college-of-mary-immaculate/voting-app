@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import AdminLayout from "../../components/AdminLayout";
+import AdminLayout from "./AdminLayout";
 import Elections from "./Elections";
 import Positions from "./Positions";
 import Candidates from "./Candidates";
+import "./AdminLayout.css";
 
 function AdminDashboard() {
   const [elections, setElections] = useState([]);
@@ -41,21 +42,23 @@ function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <div id="dashboard">
-        <h2>Admin Dashboard</h2>
-
-        <h3>Total Elections: {elections.length}</h3>
-        <h3>Total Positions: {positions.length}</h3>
-        <h3>Total Candidates: {candidates.length}</h3>
+      {/* Dashboard stats */}
+      <div id="dashboard" className="admin-section">
+        <h2 className="section-heading">Admin Dashboard</h2>
+        <div className="dashboard-card">Total Elections: {elections.length}</div>
+        <div className="dashboard-card">Total Positions: {positions.length}</div>
+        <div className="dashboard-card">Total Candidates: {candidates.length}</div>
       </div>
 
-      <div id="elections" style={{ marginTop: "40px" }}>
-        <h2>Elections</h2>
+      {/* Elections Section */}
+      <div id="elections" className="admin-section">
+        <h2 className="section-heading">Elections</h2>
         <Elections elections={elections} refresh={refresh} />
       </div>
 
-      <div id="positions" style={{ marginTop: "40px" }}>
-        <h2>Positions</h2>
+      {/* Positions Section */}
+      <div id="positions" className="admin-section">
+        <h2 className="section-heading">Positions</h2>
         <Positions
           positions={positions}
           elections={elections}
@@ -63,8 +66,9 @@ function AdminDashboard() {
         />
       </div>
 
-      <div id="candidates" style={{ marginTop: "40px" }}>
-        <h2>Candidates</h2>
+      {/* Candidates Section */}
+      <div id="candidates" className="admin-section">
+        <h2 className="section-heading">Candidates</h2>
         <Candidates
           candidates={candidates}
           positions={positions}
