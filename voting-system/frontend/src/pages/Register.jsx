@@ -20,39 +20,41 @@ function Register() {
   };
 
   return (
-    <div className="register-page page-section">
-      <div className="register-card card">
+      <div className="register-page">
+      <div className="register-card">
         <h2 className="register-title page-title">Create Account</h2>
-        <p className="page-subtitle">Register to participate in the election</p>
+        <p className="register-subtitle">Register to participate in the election</p>
 
-        <input
-          className="register-input form-input"
-          placeholder="Full Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+        <div className="register-form">
+          <input
+            className="register-input"
+            placeholder="Full Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
 
-        <input
-          className="register-input form-input"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+          <input
+            className="register-input"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
 
-        <input
-          className="register-input form-input"
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          <input
+            className="register-input"
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-        <button className="register-button btn-primary" onClick={handleRegister}>
-          Register
-        </button>
+          <button className="register-button" onClick={handleRegister}>
+            Register
+          </button>
+        </div>
 
         <p className="register-footer">
-          Already have an account? <span onClick={() => navigate("/login")}>Login</span>
+          Already have an account? <span onClick={() => navigate("/")}>Login</span>
         </p>
       </div>
     </div>

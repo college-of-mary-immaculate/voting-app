@@ -28,8 +28,7 @@ function Elections({ elections, refresh }) {
 
   const handleAddOrUpdate = async () => {
     if (!title || !startDate || !endDate) {
-      alert("Please fill all fields");
-      return;
+      return alert("Please fill all fields");
     }
 
     const url = editId
@@ -78,7 +77,6 @@ function Elections({ elections, refresh }) {
 
     const data = await res.json();
     alert(data.message);
-
     refresh();
   };
 
@@ -96,14 +94,13 @@ function Elections({ elections, refresh }) {
         body: JSON.stringify({
           title: election.title,
           start_date: election.start_date,
-          end_date: new Date().toISOString(), // end now
+          end_date: new Date().toISOString(),
         }),
       }
     );
 
     const data = await res.json();
     alert(data.message);
-
     refresh();
   };
 
@@ -120,7 +117,7 @@ function Elections({ elections, refresh }) {
         },
         body: JSON.stringify({
           title: election.title,
-          start_date: new Date().toISOString(), // start now
+          start_date: new Date().toISOString(),
           end_date: election.end_date,
         }),
       }
@@ -128,37 +125,43 @@ function Elections({ elections, refresh }) {
 
     const data = await res.json();
     alert(data.message);
-
     refresh();
   };
 
   return (
     <div>
-      <h3>Elections</h3>
 
       <div style={{ marginBottom: "15px" }}>
         <input
-          placeholder="Title"
+          placeholder="Election Title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
+
         <input
           type="date"
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
         />
+
         <input
           type="date"
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
         />
-        <button onClick={handleAddOrUpdate}>
-          {editId ? "Update Election" : "Add Election"}
+
+        <button className="btn btn-primary" onClick={handleAddOrUpdate}>
+          {editId ? "Update" : "Add"}
         </button>
-        {editId && <button onClick={resetForm}>Cancel</button>}
+
+        {editId && (
+          <button className="btn btn-delete" onClick={resetForm}>
+            Cancel
+          </button>
+        )}
       </div>
 
-      <table border="1" cellPadding="5">
+      <table>
         <thead>
           <tr>
             <th>Title</th>
@@ -175,30 +178,59 @@ function Elections({ elections, refresh }) {
 
             return (
               <tr key={e.id}>
-                <td>{e.title}</td>
-                <td>{new Date(e.start_date).toLocaleString()}</td>
-                <td>{new Date(e.end_date).toLocaleString()}</td>
-                <td>{status}</td>
+                <td data-label="Title">{e.title}</td>
 
-                <td>
+                <td data-label="Start">
+                  {new Date(e.start_date).toLocaleString()}
+                </td>
+
+                <td data-label="End">
+                  {new Date(e.end_date).toLocaleString()}
+                </td>
+
+                <td data-label="Status">
+                  <span className={`status ${status.toLowerCase()}`}>
+                    {status}
+                  </span>
+                </td>
+
+                <td data-label="Actions">
                   {status === "Upcoming" && (
                     <>
-                      <button onClick={() => handleEdit(e)}>Edit</button>
-                      <button onClick={() => handleDelete(e.id)}>Delete</button>
-                      <button onClick={() => handleStartElection(e)}>
-                        Start Now
+                      <button
+                        className="btn btn-edit"
+                        onClick={() => handleEdit(e)}
+                      >
+                        ✏️ Edit
+                      </button>
+
+                      <button
+                        className="btn btn-delete"
+                        onClick={() => handleDelete(e.id)}
+                      >
+                        🗑 Delete
+                      </button>
+
+                      <button
+                        className="btn btn-start"
+                        onClick={() => handleStartElection(e)}
+                      >
+                        ▶ Start
                       </button>
                     </>
                   )}
 
                   {status === "Ongoing" && (
-                    <button onClick={() => handleEndElection(e)}>
-                      End Election
+                    <button
+                      className="btn btn-end"
+                      onClick={() => handleEndElection(e)}
+                    >
+                      ⏹ End
                     </button>
                   )}
 
                   {status === "Ended" && (
-                    <span style={{ color: "gray" }}>Closed</span>
+                    <span style={{ color: "gray" }}>🔒 Closed</span>
                   )}
                 </td>
               </tr>
