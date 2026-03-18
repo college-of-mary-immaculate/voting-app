@@ -21,31 +21,37 @@ function Login({ setUser }) {
   };
 
   return (
-    <div className="login-page page-section">
-      <div className="login-card card">
+    <div className="login-page">
+    <div className="login-card">
       <h2 className="login-title page-title">Online Voting System</h2>
-      <p className="page-subtitle">Sign-in to access the voting portal</p>
+      <p className="login-subtitle">Sign in to access the voting portal</p>
 
+      <div className="login-form">
         <input
-          className="login-input form-input"
+          className="login-input"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
 
         <input
-          className="login-input form-input"
+          className="login-input"
           type="password"
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button className="login-button btn-primary" onClick={handleLogin}>
+        <button className="login-button" onClick={handleLogin}>
           Login
         </button>
       </div>
+
+      <div className="login-footer">
+        Don’t have an account? <a href="/register">Register</a>
+      </div>
     </div>
+  </div>
   );
 }
 

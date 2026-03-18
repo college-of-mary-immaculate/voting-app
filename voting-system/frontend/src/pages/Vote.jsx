@@ -207,9 +207,12 @@ function Vote() {
                       </div>
 
                       <div className="candidate-info">
+                      <div className="candidate-name-row">
                         <h3>{c.name}</h3>
-                        <p>Party: {c.party || "N/A"}</p>
+                        {alreadyVotedThis && <span className="voted-badge">Voted</span>}
                       </div>
+                      <p>Party: {c.party || "N/A"}</p>
+                    </div>
 
                       <div className="candidate-action">
                         {alreadyVotedThis ? (
