@@ -24,7 +24,7 @@ function Login({ setUser }) {
     <div className="login-page page-section">
       <div className="login-card card">
       <h2 className="login-title page-title">Online Voting System</h2>
-      <p className="page-subtitle">Sign in to access the voting portal</p>
+      <p className="page-subtitle">Sign-in to access the voting portal</p>
 
         <input
           className="login-input form-input"
