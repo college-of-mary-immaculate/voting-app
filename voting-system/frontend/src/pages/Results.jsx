@@ -10,33 +10,79 @@ import {
   Legend,
 } from "chart.js";
 import { getResults, getElections } from "../api/api";
+import socket from "../api/socket";
 import "./Results.css";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 function Results() {
   const [elections, setElections] = useState([]);
-  const [selectedElection, setSelectedElection] = useState("");
+  const [selectedElection, setSelectedElection] = useState(null);
   const [results, setResults] = useState([]);
+  const [totalVotes, setTotalVotes] = useState(0);
 
+  // Load elections and select latest by default
   useEffect(() => {
     getElections()
-      .then(setElections)
-      .catch((err) => console.error("Failed to fetch elections:", err));
+      .then((electionsData) => {
+        setElections(electionsData);
+        if (electionsData.length > 0) {
+          const latestElection = electionsData.reduce((latest, current) => {
+            return new Date(current.start_date) > new Date(latest.start_date)
+              ? current
+              : latest;
+          }, electionsData[0]);
+          setSelectedElection(latestElection.id);
+        }
+      })
+      .catch((err) => console.error(err));
   }, []);
 
+  // Load results whenever selectedElection changes
   useEffect(() => {
     if (selectedElection) {
       getResults(selectedElection)
         .then(setResults)
-        .catch((err) => console.error("Failed to fetch results:", err));
+        .catch((err) => console.error(err));
     } else {
       setResults([]);
     }
   }, [selectedElection]);
 
+  // Real-time updates via socket
+  useEffect(() => {
+    if (!selectedElection) return;
+
+    socket.emit("joinElection", selectedElection);
+
+    const handleUpdate = (data) => {
+      if (String(data.electionId) !== String(selectedElection)) return;
+
+      setResults((prev) =>
+        prev.map((r) =>
+          r.candidate_id === data.candidateId
+            ? { ...r, votes: r.votes + 1 }
+            : r
+        )
+      );
+    };
+
+    socket.on("resultsUpdated", handleUpdate);
+
+    return () => {
+      socket.off("resultsUpdated", handleUpdate);
+    };
+  }, [selectedElection]);
+
+  // Calculate total votes
+  useEffect(() => {
+    const total = results.reduce((sum, r) => sum + r.votes, 0);
+    setTotalVotes(total);
+  }, [results]);
+
+  // Group results by position
   const resultsByPosition = results.reduce((acc, r) => {
-    const pos = r.position || "Unknown Position";
+    const pos = r.position ?? "Unknown Position";
     if (!acc[pos]) acc[pos] = [];
     acc[pos].push(r);
     return acc;
@@ -52,12 +98,19 @@ function Results() {
           </p>
         </div>
 
+        {/* Total Votes */}
+        <div className="turnout-card">
+          <h3>Total Votes Cast</h3>
+          <p className="turnout-number">{totalVotes}</p>
+        </div>
+
+        {/* Election Selector */}
         <div className="results-select-card card">
           <label>Select Election</label>
           <select
             className="form-select"
-            value={selectedElection}
-            onChange={(e) => setSelectedElection(e.target.value)}
+            value={selectedElection || ""}
+            onChange={(e) => setSelectedElection(Number(e.target.value))}
           >
             <option value="">-- Select Election --</option>
             {elections.map((e) => (
@@ -69,17 +122,30 @@ function Results() {
           </select>
         </div>
 
+        {/* Results Grid */}
         {selectedElection ? (
           Object.keys(resultsByPosition).length > 0 ? (
             <div className="results-grid">
               {Object.entries(resultsByPosition).map(([position, candidates]) => {
+                // Sort by votes descending
+                const sortedCandidates = [...candidates].sort(
+                  (a, b) => b.votes - a.votes
+                );
+
+                // Determine winner index only if votes > 0
+                const winnerIndex =
+                  sortedCandidates[0].votes > 0 ? 0 : -1;
+
+                // Chart data with dynamic colors
                 const chartData = {
-                  labels: candidates.map((c) => c.candidate),
+                  labels: sortedCandidates.map((c) => c.candidate),
                   datasets: [
                     {
                       label: "# of Votes",
-                      data: candidates.map((c) => c.votes),
-                      backgroundColor: "rgba(37, 99, 235, 0.75)",
+                      data: sortedCandidates.map((c) => c.votes),
+                      backgroundColor: sortedCandidates.map((c, index) =>
+                        index === winnerIndex ? "gold" : "rgba(37, 99, 235, 0.75)"
+                      ),
                       borderRadius: 6,
                     },
                   ],
@@ -89,33 +155,25 @@ function Results() {
                   indexAxis: "y",
                   responsive: true,
                   maintainAspectRatio: false,
+                  animation: { duration: 800, easing: "easeOutQuart" },
                   plugins: {
                     legend: { position: "top" },
                     title: { display: true, text: `${position} Results` },
                   },
                   scales: {
-                    x: {
-                      beginAtZero: true,
-                      ticks: {
-                        stepSize: 1,
-                      },
-                    },
-                    y: {
-                      beginAtZero: true,
-                    },
+                    x: { beginAtZero: true, ticks: { stepSize: 1 } },
                   },
                 };
 
                 return (
                   <div key={position} className="result-card card">
                     <h2 className="result-title">{position}</h2>
-
                     <div className="chart-wrapper">
                       <Bar data={chartData} options={chartOptions} />
                     </div>
 
                     <div className="result-summary">
-                      {candidates.map((c, index) => (
+                      {sortedCandidates.map((c, index) => (
                         <div key={index} className="result-row">
                           <span>{c.candidate}</span>
                           <strong>{c.votes} vote(s)</strong>
@@ -130,9 +188,7 @@ function Results() {
             <div className="empty-state">No votes yet.</div>
           )
         ) : (
-          <div className="empty-state">
-            Please select an election to see results.
-          </div>
+          <div className="empty-state">Please select an election to see results.</div>
         )}
       </div>
     </div>

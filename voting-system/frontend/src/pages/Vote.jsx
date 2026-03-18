@@ -23,6 +23,14 @@ function Vote() {
     getElections()
       .then((data) => {
         setElections(data);
+        if (data.length > 0) {
+          const latestElection = data.reduce((latest, current) => {
+            return new Date(current.start_date) > new Date(latest.start_date)
+              ? current
+              : latest;
+          }, data[0]);
+          setSelectedElection(latestElection);
+        }
       })
       .catch((err) => console.error("Failed to fetch elections:", err));
   }, []);
@@ -207,12 +215,14 @@ function Vote() {
                       </div>
 
                       <div className="candidate-info">
-                      <div className="candidate-name-row">
-                        <h3>{c.name}</h3>
-                        {alreadyVotedThis && <span className="voted-badge">Voted</span>}
+                        <div className="candidate-name-row">
+                          <h3>{c.name}</h3>
+                          {alreadyVotedThis && (
+                            <span className="voted-badge">Voted</span>
+                          )}
+                        </div>
+                        <p>Party: {c.party || "N/A"}</p>
                       </div>
-                      <p>Party: {c.party || "N/A"}</p>
-                    </div>
 
                       <div className="candidate-action">
                         {alreadyVotedThis ? (

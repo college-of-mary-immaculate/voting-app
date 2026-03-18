@@ -1,6 +1,5 @@
 const db = require("../config/db");
 
-// 1️⃣ Public: get all elections
 exports.getPublicElections = (req, res) => {
   const sql = `
     SELECT id, title, start_date, end_date, status
@@ -13,7 +12,6 @@ exports.getPublicElections = (req, res) => {
   });
 };
 
-// 2️⃣ Public: get candidates by election
 exports.getCandidatesByElection = (req, res) => {
   const electionId = req.params.electionId;
 
