@@ -17,6 +17,9 @@
 }
 
 .navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 20px;
   font-weight: 700;
   color: var(--text);
@@ -26,6 +29,11 @@
 .navbar-brand:hover {
   color: var(--primary);
   text-decoration: none;
+}
+
+.navbar-logo {
+  font-size: 22px;
+  line-height: 1;
 }
 
 .nav-link {
@@ -86,5 +94,9 @@
 
   .navbar-brand {
     font-size: 18px;
+  }
+
+  .navbar-logo {
+    font-size: 20px;
   }
 }

@@ -14,6 +14,10 @@ function Vote() {
   const [loading, setLoading] = useState(false);
   const [voting, setVoting] = useState(false);
   const [votedPositions, setVotedPositions] = useState({});
+  const [notification, setNotification] = useState({
+    message: "",
+    type: "",
+  });
 
   useEffect(() => {
     getElections()
@@ -49,6 +53,16 @@ function Vote() {
       .finally(() => setLoading(false));
   }, [selectedElection]);
 
+  useEffect(() => {
+    if (!notification.message) return;
+
+    const timer = setTimeout(() => {
+      setNotification({ message: "", type: "" });
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [notification]);
+
   const groupedCandidates = candidates.reduce((acc, c) => {
     const posName = c.position || "Unknown Position";
     if (!acc[posName]) acc[posName] = [];
@@ -65,21 +79,30 @@ function Vote() {
 
   const handleVote = async (candidate) => {
     if (!isElectionActive(selectedElection)) {
-      alert("You cannot vote in this election. It is not active.");
+      setNotification({
+        message: "You cannot vote in this election. It is not active.",
+        type: "error",
+      });
       return;
     }
 
     const positionId = candidate.position_id;
 
     if (votedPositions[positionId]) {
-      alert("You already voted for this position.");
+      setNotification({
+        message: "You already voted for this position.",
+        type: "error",
+      });
       return;
     }
 
     setVoting(true);
     try {
       const data = await voteCandidate(candidate.id, selectedElection.id);
-      alert(data.message || "Vote recorded!");
+      setNotification({
+        message: data.message || "Vote recorded successfully!",
+        type: "success",
+      });
 
       setVotedPositions((prev) => ({
         ...prev,
@@ -87,7 +110,10 @@ function Vote() {
       }));
     } catch (err) {
       console.error(err);
-      alert(err.message || "Failed to submit vote.");
+      setNotification({
+        message: err.message || "Failed to submit vote.",
+        type: "error",
+      });
     } finally {
       setVoting(false);
     }
@@ -103,9 +129,16 @@ function Vote() {
           </p>
         </div>
 
+        {notification.message && (
+          <div className={`vote-notification ${notification.type}`}>
+            {notification.message}
+          </div>
+        )}
+
         <div className="election-select-card card">
           <label>Select Election</label>
-          <select className="form-select"
+          <select
+            className="form-select"
             value={selectedElection?.id || ""}
             onChange={(e) =>
               setSelectedElection(
@@ -127,7 +160,9 @@ function Vote() {
         {loading && <div className="empty-state">Loading candidates...</div>}
 
         {!loading && selectedElection && !candidates.length && (
-          <div className="empty-state">No candidates available for this election.</div>
+          <div className="empty-state">
+            No candidates available for this election.
+          </div>
         )}
 
         {!loading && !selectedElection && (
@@ -163,7 +198,11 @@ function Vote() {
                             className="candidate-photo"
                           />
                         ) : (
-                          <div className="candidate-no-photo">No Photo</div>
+                          <div className="candidate-no-photo">
+                            <span className="candidate-initial">
+                              {c.name ? c.name.charAt(0).toUpperCase() : "?"}
+                            </span>
+                          </div>
                         )}
                       </div>
 
@@ -174,7 +213,10 @@ function Vote() {
 
                       <div className="candidate-action">
                         {alreadyVotedThis ? (
-                          <button className="vote-button voted btn-primary" disabled>
+                          <button
+                            className="vote-button voted btn-primary"
+                            disabled
+                          >
                             Voted ✓
                           </button>
                         ) : (

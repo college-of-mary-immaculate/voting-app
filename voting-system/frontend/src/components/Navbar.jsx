@@ -14,8 +14,12 @@ export default function Navbar({ user, setUser }) {
   return (
     <nav className="navbar">
       <div className="navbar-left">
-        <Link to={user ? (user.role === "admin" ? "/admin" : "/vote") : "/"} className="navbar-brand">
-          Online Voting System
+        <Link
+          to={user ? (user.role === "admin" ? "/admin" : "/vote") : "/"}
+          className="navbar-brand"
+        >
+          <span className="navbar-logo">🗳</span>
+          <span>Online Voting System</span>
         </Link>
       </div>
 
