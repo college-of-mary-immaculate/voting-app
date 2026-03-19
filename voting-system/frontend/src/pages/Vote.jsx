@@ -5,6 +5,7 @@ import {
   voteCandidate,
   checkVote,
 } from "../api/api";
+import socket from "../api/socket";
 import "./Vote.css";
 
 function Vote() {
@@ -14,27 +15,51 @@ function Vote() {
   const [loading, setLoading] = useState(false);
   const [voting, setVoting] = useState(false);
   const [votedPositions, setVotedPositions] = useState({});
-  const [notification, setNotification] = useState({
-    message: "",
-    type: "",
-  });
+  const [timeRemaining, setTimeRemaining] = useState("");
 
+  // Load elections on mount
   useEffect(() => {
-    getElections()
-      .then((data) => {
-        setElections(data);
-        if (data.length > 0) {
-          const latestElection = data.reduce((latest, current) => {
-            return new Date(current.start_date) > new Date(latest.start_date)
-              ? current
-              : latest;
-          }, data[0]);
-          setSelectedElection(latestElection);
-        }
-      })
-      .catch((err) => console.error("Failed to fetch elections:", err));
+    loadElections();
   }, []);
 
+  const loadElections = async () => {
+    try {
+      const data = await getElections();
+      setElections(data);
+
+      if (data.length > 0) {
+        // Select the latest election by start_date
+        const latestElection = data.reduce((latest, current) => {
+          return new Date(current.start_date) > new Date(latest.start_date)
+            ? current
+            : latest;
+        }, data[0]);
+
+        setSelectedElection(latestElection);
+      }
+    } catch (err) {
+      console.error("Failed to fetch elections:", err);
+    }
+  };
+
+  // Socket updates for elections
+  useEffect(() => {
+    socket.on("election_update", async () => {
+      const updatedElections = await getElections();
+      setElections([...updatedElections]);
+
+      if (selectedElection) {
+        const updated = updatedElections.find(
+          (e) => e.id === selectedElection.id
+        );
+        setSelectedElection(updated || null);
+      }
+    });
+
+    return () => socket.off("election_update");
+  }, [selectedElection]);
+
+  // Load candidates & voting info when election changes
   useEffect(() => {
     if (!selectedElection) {
       setCandidates([]);
@@ -61,15 +86,32 @@ function Vote() {
       .finally(() => setLoading(false));
   }, [selectedElection]);
 
+  // Timer for active election countdown
   useEffect(() => {
-    if (!notification.message) return;
+    if (!selectedElection) return;
 
-    const timer = setTimeout(() => {
-      setNotification({ message: "", type: "" });
-    }, 3000);
+    const updateTimer = () => {
+      const now = new Date();
+      const start = new Date(selectedElection.start_date);
+      const end = new Date(selectedElection.end_date);
 
-    return () => clearTimeout(timer);
-  }, [notification]);
+      if (now < start) {
+        setTimeRemaining(`Upcoming: starts ${start.toLocaleString()}`);
+      } else if (now >= start && now <= end) {
+        const diff = end - now;
+        const hours = Math.floor(diff / 1000 / 60 / 60);
+        const minutes = Math.floor((diff / 1000 / 60) % 60);
+        const seconds = Math.floor((diff / 1000) % 60);
+        setTimeRemaining(`Active: ${hours}h ${minutes}m ${seconds}s remaining`);
+      } else {
+        setTimeRemaining("Ended");
+      }
+    };
+
+    updateTimer();
+    const timerId = setInterval(updateTimer, 1000);
+    return () => clearInterval(timerId);
+  }, [selectedElection]);
 
   const groupedCandidates = candidates.reduce((acc, c) => {
     const posName = c.position || "Unknown Position";
@@ -79,6 +121,7 @@ function Vote() {
   }, {});
 
   const isElectionActive = (election) => {
+    if (!election) return false;
     const now = new Date();
     const start = new Date(election.start_date);
     const end = new Date(election.end_date);
@@ -86,31 +129,16 @@ function Vote() {
   };
 
   const handleVote = async (candidate) => {
-    if (!isElectionActive(selectedElection)) {
-      setNotification({
-        message: "You cannot vote in this election. It is not active.",
-        type: "error",
-      });
-      return;
-    }
+    if (!isElectionActive(selectedElection)) return;
 
     const positionId = candidate.position_id;
 
-    if (votedPositions[positionId]) {
-      setNotification({
-        message: "You already voted for this position.",
-        type: "error",
-      });
-      return;
-    }
+    if (votedPositions[positionId]) return;
 
     setVoting(true);
+
     try {
-      const data = await voteCandidate(candidate.id, selectedElection.id);
-      setNotification({
-        message: data.message || "Vote recorded successfully!",
-        type: "success",
-      });
+      await voteCandidate(candidate.id, selectedElection.id);
 
       setVotedPositions((prev) => ({
         ...prev,
@@ -118,10 +146,6 @@ function Vote() {
       }));
     } catch (err) {
       console.error(err);
-      setNotification({
-        message: err.message || "Failed to submit vote.",
-        type: "error",
-      });
     } finally {
       setVoting(false);
     }
@@ -133,15 +157,9 @@ function Vote() {
         <div className="vote-header">
           <h1 className="page-title">Cast Your Vote</h1>
           <p className="page-subtitle">
-            Select an active election and vote for your preferred candidates.
+            Select an election and view candidates. Voting is disabled for inactive elections.
           </p>
         </div>
-
-        {notification.message && (
-          <div className={`vote-notification ${notification.type}`}>
-            {notification.message}
-          </div>
-        )}
 
         <div className="election-select-card card">
           <label>Select Election</label>
@@ -156,21 +174,25 @@ function Vote() {
           >
             <option value="">-- Select Election --</option>
             {elections.map((e) => (
-              <option key={e.id} value={e.id} disabled={!isElectionActive(e)}>
+              <option key={e.id} value={e.id}>
                 {e.title} ({new Date(e.start_date).toLocaleDateString()} -{" "}
                 {new Date(e.end_date).toLocaleDateString()})
-                {!isElectionActive(e) ? " (Not Active)" : ""}
               </option>
             ))}
           </select>
         </div>
 
+        {/* Election status / countdown */}
+        {selectedElection && (
+          <div className="election-status-card card">
+            <strong>Status: </strong> {timeRemaining}
+          </div>
+        )}
+
         {loading && <div className="empty-state">Loading candidates...</div>}
 
         {!loading && selectedElection && !candidates.length && (
-          <div className="empty-state">
-            No candidates available for this election.
-          </div>
+          <div className="empty-state">No candidates available for this election.</div>
         )}
 
         {!loading && !selectedElection && (
@@ -217,34 +239,24 @@ function Vote() {
                       <div className="candidate-info">
                         <div className="candidate-name-row">
                           <h3>{c.name}</h3>
-                          {alreadyVotedThis && (
-                            <span className="voted-badge">Voted</span>
-                          )}
                         </div>
                         <p>Party: {c.party || "N/A"}</p>
                       </div>
 
                       <div className="candidate-action">
-                        {alreadyVotedThis ? (
-                          <button
-                            className="vote-button voted btn-primary"
-                            disabled
-                          >
-                            Voted ✓
-                          </button>
-                        ) : (
-                          <button
-                            className="vote-button btn-primary"
-                            onClick={() => handleVote(c)}
-                            disabled={
-                              voting ||
-                              isVotedOtherCandidate ||
-                              !isElectionActive(selectedElection)
-                            }
-                          >
-                            {voting ? "Voting..." : "Vote"}
-                          </button>
-                        )}
+                        <button
+                          className={`vote-button btn-primary ${
+                            alreadyVotedThis ? "voted" : ""
+                          }`}
+                          onClick={() => handleVote(c)}
+                          disabled={
+                            voting ||
+                            isVotedOtherCandidate ||
+                            !isElectionActive(selectedElection)
+                          }
+                        >
+                          {alreadyVotedThis ? "Voted ✓" : "Vote"}
+                        </button>
                       </div>
                     </div>
                   );

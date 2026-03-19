@@ -21,7 +21,6 @@ function Results() {
   const [results, setResults] = useState([]);
   const [totalVotes, setTotalVotes] = useState(0);
 
-  // Load elections and select latest by default
   useEffect(() => {
     getElections()
       .then((electionsData) => {
@@ -38,18 +37,17 @@ function Results() {
       .catch((err) => console.error(err));
   }, []);
 
-  // Load results whenever selectedElection changes
   useEffect(() => {
-    if (selectedElection) {
+    if (selectedElection && Number(selectedElection)) {
       getResults(selectedElection)
         .then(setResults)
         .catch((err) => console.error(err));
     } else {
       setResults([]);
+      setTotalVotes(0);
     }
   }, [selectedElection]);
 
-  // Real-time updates via socket
   useEffect(() => {
     if (!selectedElection) return;
 
@@ -69,24 +67,29 @@ function Results() {
 
     socket.on("resultsUpdated", handleUpdate);
 
-    return () => {
-      socket.off("resultsUpdated", handleUpdate);
-    };
+    return () => socket.off("resultsUpdated", handleUpdate);
   }, [selectedElection]);
 
-  // Calculate total votes
   useEffect(() => {
-    const total = results.reduce((sum, r) => sum + r.votes, 0);
-    setTotalVotes(total);
+    if (results.length > 0) {
+      const total = results.reduce((sum, r) => sum + r.votes, 0);
+      setTotalVotes(total);
+    } else {
+      setTotalVotes(0);
+    }
   }, [results]);
 
-  // Group results by position
   const resultsByPosition = results.reduce((acc, r) => {
     const pos = r.position ?? "Unknown Position";
     if (!acc[pos]) acc[pos] = [];
     acc[pos].push(r);
     return acc;
   }, {});
+
+  const handleElectionChange = (e) => {
+    const value = e.target.value;
+    setSelectedElection(value ? Number(value) : null);
+  };
 
   return (
     <div className="results-page page-section">
@@ -98,19 +101,13 @@ function Results() {
           </p>
         </div>
 
-        {/* Total Votes */}
-        <div className="turnout-card">
-          <h3>Total Votes Cast</h3>
-          <p className="turnout-number">{totalVotes}</p>
-        </div>
-
-        {/* Election Selector */}
+        {}
         <div className="results-select-card card">
           <label>Select Election</label>
           <select
             className="form-select"
             value={selectedElection || ""}
-            onChange={(e) => setSelectedElection(Number(e.target.value))}
+            onChange={handleElectionChange}
           >
             <option value="">-- Select Election --</option>
             {elections.map((e) => (
@@ -122,21 +119,24 @@ function Results() {
           </select>
         </div>
 
-        {/* Results Grid */}
+        {}
+        {selectedElection && results.length > 0 && (
+          <div className="turnout-card">
+            <h3>Total Votes Cast</h3>
+            <p className="turnout-number">{totalVotes}</p>
+          </div>
+        )}
+
+        {}
         {selectedElection ? (
           Object.keys(resultsByPosition).length > 0 ? (
             <div className="results-grid">
               {Object.entries(resultsByPosition).map(([position, candidates]) => {
-                // Sort by votes descending
                 const sortedCandidates = [...candidates].sort(
                   (a, b) => b.votes - a.votes
                 );
+                const winnerIndex = sortedCandidates[0].votes > 0 ? 0 : -1;
 
-                // Determine winner index only if votes > 0
-                const winnerIndex =
-                  sortedCandidates[0].votes > 0 ? 0 : -1;
-
-                // Chart data with dynamic colors
                 const chartData = {
                   labels: sortedCandidates.map((c) => c.candidate),
                   datasets: [
@@ -160,9 +160,7 @@ function Results() {
                     legend: { position: "top" },
                     title: { display: true, text: `${position} Results` },
                   },
-                  scales: {
-                    x: { beginAtZero: true, ticks: { stepSize: 1 } },
-                  },
+                  scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } },
                 };
 
                 return (

@@ -20,6 +20,13 @@ function Candidates({ candidates, positions, elections, refresh }) {
     return "Unknown";
   };
 
+  const isEditable = (electionId) => {
+    const election = elections.find((e) => e.id === parseInt(electionId));
+    if (!election) return false;
+    const status = getStatus(election.start_date, election.end_date);
+    return status === "Upcoming";
+  };
+
   const resetForm = () => {
     setName("");
     setParty("");
@@ -32,6 +39,10 @@ function Candidates({ candidates, positions, elections, refresh }) {
   const handleAddOrUpdate = async () => {
     if (!name || !party || !electionId || !positionId) {
       return alert("Please fill all fields");
+    }
+
+    if (!isEditable(electionId)) {
+      return alert("Cannot modify candidates for ongoing or ended elections");
     }
 
     const formData = new FormData();
@@ -63,6 +74,7 @@ function Candidates({ candidates, positions, elections, refresh }) {
   };
 
   const handleEdit = (c) => {
+    if (!isEditable(c.election_id)) return;
     setEditId(c.id);
     setName(c.name);
     setParty(c.party);
@@ -71,7 +83,8 @@ function Candidates({ candidates, positions, elections, refresh }) {
     setPhoto(null);
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id, electionId) => {
+    if (!isEditable(electionId)) return;
     if (!window.confirm("Delete this candidate?")) return;
 
     const res = await fetch(
@@ -88,26 +101,32 @@ function Candidates({ candidates, positions, elections, refresh }) {
   };
 
   const positionsForElection = electionId
-    ? positions.filter(
-        (p) => p.election_id === parseInt(electionId)
-      )
+    ? positions.filter((p) => p.election_id === parseInt(electionId))
     : [];
 
   return (
     <div>
-
       {/* FORM */}
-      <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "15px" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          alignItems: "center",
+          marginBottom: "15px",
+        }}
+      >
         <input
           placeholder="Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          disabled={editId && !isEditable(electionId)}
         />
 
         <input
           placeholder="Party"
           value={party}
           onChange={(e) => setParty(e.target.value)}
+          disabled={editId && !isEditable(electionId)}
         />
 
         <select
@@ -116,6 +135,7 @@ function Candidates({ candidates, positions, elections, refresh }) {
             setElectionId(e.target.value);
             setPositionId("");
           }}
+          disabled={editId && !isEditable(electionId)}
         >
           <option value="">Select Election</option>
           {elections.map((e) => {
@@ -131,6 +151,7 @@ function Candidates({ candidates, positions, elections, refresh }) {
         <select
           value={positionId}
           onChange={(e) => setPositionId(e.target.value)}
+          disabled={editId && !isEditable(electionId)}
         >
           <option value="">Select Position</option>
           {positionsForElection.map((p) => (
@@ -143,9 +164,14 @@ function Candidates({ candidates, positions, elections, refresh }) {
         <input
           type="file"
           onChange={(e) => setPhoto(e.target.files[0])}
+          disabled={editId && !isEditable(electionId)}
         />
 
-        <button className="btn btn-primary" onClick={handleAddOrUpdate}>
+        <button
+          className="btn btn-primary"
+          onClick={handleAddOrUpdate}
+          disabled={editId && !isEditable(electionId)}
+        >
           {editId ? "Update" : "Add"}
         </button>
 
@@ -155,7 +181,6 @@ function Candidates({ candidates, positions, elections, refresh }) {
           </button>
         )}
       </div>
-
 
       <table>
         <thead>
@@ -171,23 +196,16 @@ function Candidates({ candidates, positions, elections, refresh }) {
 
         <tbody>
           {candidates.map((c) => {
-            const election = elections.find(
-              (e) => e.id === c.election_id
-            );
-            const position = positions.find(
-              (p) => p.id === c.position_id
-            );
+            const election = elections.find((e) => e.id === c.election_id);
+            const position = positions.find((p) => p.id === c.position_id);
+            const editable = isEditable(c.election_id);
 
             return (
               <tr key={c.id}>
                 <td data-label="Name">{c.name}</td>
                 <td data-label="Party">{c.party}</td>
-                <td data-label="Election">
-                  {election?.title || "Unknown"}
-                </td>
-                <td data-label="Position">
-                  {position?.name || "Unknown"}
-                </td>
+                <td data-label="Election">{election?.title || "Unknown"}</td>
+                <td data-label="Position">{position?.name || "Unknown"}</td>
                 <td data-label="Photo">
                   {c.photo && (
                     <img
@@ -203,13 +221,15 @@ function Candidates({ candidates, positions, elections, refresh }) {
                   <button
                     className="btn btn-edit"
                     onClick={() => handleEdit(c)}
+                    disabled={!editable}
                   >
                     ✏️ Edit
                   </button>
 
                   <button
                     className="btn btn-delete"
-                    onClick={() => handleDelete(c.id)}
+                    onClick={() => handleDelete(c.id, c.election_id)}
+                    disabled={!editable}
                   >
                     🗑 Delete
                   </button>
