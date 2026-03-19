@@ -1,18 +1,19 @@
 const db = require("../config/db");
 
-exports.getPublicElections = (req, res) => {
+const getPublicElections = (req, res) => {
   const sql = `
     SELECT id, title, start_date, end_date, status
     FROM elections
     ORDER BY id DESC
   `;
+
   db.query(sql, (err, result) => {
     if (err) return res.status(500).json(err);
     res.json(result);
   });
 };
 
-exports.getCandidatesByElection = (req, res) => {
+const getCandidatesByElection = (req, res) => {
   const electionId = req.params.electionId;
 
   const sql = `
@@ -22,7 +23,7 @@ exports.getCandidatesByElection = (req, res) => {
       c.party,
       c.photo,
       c.position_id,
-      p.name AS position,
+      p.name AS position_title,
       e.title AS election,
       c.election_id
     FROM candidates c
@@ -36,4 +37,9 @@ exports.getCandidatesByElection = (req, res) => {
     if (err) return res.status(500).json(err);
     res.json(result);
   });
+};
+
+module.exports = {
+  getPublicElections,
+  getCandidatesByElection
 };

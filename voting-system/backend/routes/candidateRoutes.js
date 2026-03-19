@@ -36,8 +36,12 @@ const { getCandidates } = require("../controllers/candidateController");
  *                     type: string
  *                   election:
  *                     type: string
- *                   position:
+ *                   position_title:
  *                     type: string
+ *                   election_id:
+ *                     type: integer
+ *                   position_id:
+ *                     type: integer
  */
 
 router.get("/", getCandidates);
