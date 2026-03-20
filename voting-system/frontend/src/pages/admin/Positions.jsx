@@ -1,16 +1,20 @@
 import { useState } from "react";
+import {
+  createPosition,
+  updatePosition,
+  deletePosition,
+} from "../../api/api";
 
 function Positions({ positions, elections, refresh }) {
   const [name, setName] = useState("");
   const [electionId, setElectionId] = useState("");
   const [editId, setEditId] = useState(null);
 
-  const token = localStorage.getItem("token");
-
   const getStatus = (start, end) => {
     const now = new Date();
     const startD = new Date(start);
     const endD = new Date(end);
+
     if (now < startD) return "Upcoming";
     if (now >= startD && now <= endD) return "Ongoing";
     if (now > endD) return "Ended";
@@ -28,29 +32,25 @@ function Positions({ positions, elections, refresh }) {
       return alert("Please fill all fields");
     }
 
-    const url = editId
-      ? `http://localhost:3000/api/admin/positions/${editId}`
-      : "http://localhost:3000/api/admin/positions";
+    try {
+      if (editId) {
+        await updatePosition(editId, {
+          name,
+          election_id: electionId,
+        });
+      } else {
+        await createPosition({
+          name,
+          election_id: electionId,
+        });
+      }
 
-    const method = editId ? "PUT" : "POST";
-
-    const res = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        name,
-        election_id: electionId,
-      }),
-    });
-
-    const data = await res.json();
-    alert(data.message);
-
-    resetForm();
-    refresh();
+      alert("Success");
+      resetForm();
+      refresh();
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   const handleEdit = (p) => {
@@ -62,23 +62,26 @@ function Positions({ positions, elections, refresh }) {
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this position?")) return;
 
-    const res = await fetch(
-      `http://localhost:3000/api/admin/positions/${id}`,
-      {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
-    const data = await res.json();
-    alert(data.message);
-    refresh();
+    try {
+      await deletePosition(id);
+      alert("Deleted");
+      refresh();
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   return (
     <div>
-
-      <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "15px" }}>
+      {/* FORM */}
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          alignItems: "center",
+          marginBottom: "15px",
+        }}
+      >
         <input
           placeholder="Position Name"
           value={name}
@@ -100,17 +103,14 @@ function Positions({ positions, elections, refresh }) {
           })}
         </select>
 
-        <button className="btn btn-primary" onClick={handleAddOrUpdate}>
+        <button onClick={handleAddOrUpdate}>
           {editId ? "Update" : "Add"}
         </button>
 
-        {editId && (
-          <button className="btn btn-delete" onClick={resetForm}>
-            Cancel
-          </button>
-        )}
+        {editId && <button onClick={resetForm}>Cancel</button>}
       </div>
 
+      {/* TABLE */}
       <table>
         <thead>
           <tr>
@@ -135,37 +135,27 @@ function Positions({ positions, elections, refresh }) {
 
             return (
               <tr key={p.id}>
-                <td data-label="Name">{p.name}</td>
-
-                <td data-label="Election">
-                  {election?.title || "Unknown"}
-                </td>
-
-                <td data-label="Status">
+                <td>{p.name}</td>
+                <td>{election?.title || "Unknown"}</td>
+                <td>
                   <span className={`status ${status.toLowerCase()}`}>
                     {status}
                   </span>
                 </td>
 
-                <td data-label="Actions">
+                <td>
                   {editable ? (
                     <>
-                      <button
-                        className="btn btn-edit"
-                        onClick={() => handleEdit(p)}
-                      >
-                        ✏️ Edit
+                      <button onClick={() => handleEdit(p)}>
+                        Edit
                       </button>
 
-                      <button
-                        className="btn btn-delete"
-                        onClick={() => handleDelete(p.id)}
-                      >
-                        🗑 Delete
+                      <button onClick={() => handleDelete(p.id)}>
+                        Delete
                       </button>
                     </>
                   ) : (
-                    <span style={{ color: "gray" }}>🔒 Locked</span>
+                    <span style={{ color: "gray" }}>Locked</span>
                   )}
                 </td>
               </tr>

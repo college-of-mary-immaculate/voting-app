@@ -1,19 +1,22 @@
 const db = require("../config/db");
 
-const getPublicElections = (req, res) => {
+const getPublicElections = async (req, res) => {
   const sql = `
     SELECT id, title, start_date, end_date, status
     FROM elections
     ORDER BY id DESC
   `;
 
-  db.query(sql, (err, result) => {
-    if (err) return res.status(500).json(err);
+  try {
+    const result = await db.read(sql);
     res.json(result);
-  });
+  } catch (err) {
+    console.error("Get public elections error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 };
 
-const getCandidatesByElection = (req, res) => {
+const getCandidatesByElection = async (req, res) => {
   const electionId = req.params.electionId;
 
   const sql = `
@@ -33,13 +36,16 @@ const getCandidatesByElection = (req, res) => {
     ORDER BY p.id ASC
   `;
 
-  db.query(sql, [electionId], (err, result) => {
-    if (err) return res.status(500).json(err);
+  try {
+    const result = await db.read(sql, [electionId]);
     res.json(result);
-  });
+  } catch (err) {
+    console.error("Get candidates error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 };
 
 module.exports = {
   getPublicElections,
-  getCandidatesByElection
+  getCandidatesByElection,
 };

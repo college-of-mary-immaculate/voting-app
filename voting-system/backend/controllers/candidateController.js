@@ -1,6 +1,6 @@
 const db = require("../config/db");
 
-exports.getCandidates = (req, res) => {
+exports.getCandidates = async (req, res) => {
   const sql = `
     SELECT
       c.id,
@@ -17,11 +17,11 @@ exports.getCandidates = (req, res) => {
     ORDER BY p.id
   `;
 
-  db.query(sql, (err, result) => {
-    if (err) {
-      return res.status(500).json(err);
-    }
-
+  try {
+    const result = await db.read(sql);
     res.json(result);
-  });
+  } catch (err) {
+    console.error("Get candidates error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 };

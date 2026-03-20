@@ -1,110 +1,148 @@
-const API_URL = "http://localhost:3000";
+const API_URL = "/api";
+
+//////////////////////////////////////////
+// Helpers
+//////////////////////////////////////////
+const getToken = () => localStorage.getItem("token");
+
+const getHeaders = (isJson = true) => {
+  const headers = {};
+  if (isJson) headers["Content-Type"] = "application/json";
+
+  const token = getToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  return headers;
+};
+
+const request = async (url, options = {}, isJson = true) => {
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      ...getHeaders(isJson),
+      ...(options.headers || {}),
+    },
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data.message || "Request failed");
+  }
+
+  return data;
+};
 
 //////////////////////////////////////////
 // AUTH
 //////////////////////////////////////////
-
-export const login = async (email, password) => {
-  const res = await fetch(`${API_URL}/api/auth/login`, {
+export const login = (email, password) =>
+  request(`${API_URL}/auth/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
 
-  return res.json();
-};
-
-export const register = async (name, email, password) => {
-  const res = await fetch(`${API_URL}/api/auth/register`, {
+export const register = (name, email, password) =>
+  request(`${API_URL}/auth/register`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email, password }),
   });
 
-  return res.json();
-};
+//////////////////////////////////////////
+// PUBLIC
+//////////////////////////////////////////
+export const getElections = () =>
+  request(`${API_URL}/elections`, { method: "GET" }, false);
+
+export const getCandidatesByElection = (id) =>
+  request(`${API_URL}/elections/${id}/candidates`, { method: "GET" }, false);
+
+export const getResults = (id) =>
+  request(`${API_URL}/results/${id}`, { method: "GET" }, false);
 
 //////////////////////////////////////////
-// PUBLIC APIs
+// VOTING
 //////////////////////////////////////////
-
-export const getElections = async () => {
-  const res = await fetch(`${API_URL}/api/elections`);
-  if (!res.ok) throw new Error("Failed to fetch elections");
-  return res.json();
-};
-
-export const getCandidatesByElection = async (electionId) => {
-  const res = await fetch(`${API_URL}/api/elections/${electionId}/candidates`);
-  if (!res.ok) throw new Error("Failed to fetch candidates");
-  return res.json();
-};
-
-export const getResults = async (electionId) => {
-  const res = await fetch(`${API_URL}/api/results/${electionId}`);
-  if (!res.ok) throw new Error("Failed to fetch results");
-  return res.json();
-};
-
-//////////////////////////////////////////
-// USER ACTIONS
-//////////////////////////////////////////
-
-export const voteCandidate = async (candidate_id, election_id) => {
-  const token = localStorage.getItem("token");
-
-  const res = await fetch(`${API_URL}/api/vote`, {
+export const voteCandidate = (candidate_id, election_id) =>
+  request(`${API_URL}/vote`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify({ candidate_id, election_id }),
   });
 
-  const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data.message || "Vote failed");
-  }
-
-  return data;
-};
+export const checkVote = (electionId) =>
+  request(`${API_URL}/vote/check/${electionId}`, { method: "GET" });
 
 //////////////////////////////////////////
-// CHECK USER VOTES
+// ADMIN - ELECTIONS
 //////////////////////////////////////////
+export const getAdminElections = () =>
+  request(`${API_URL}/admin/elections`, { method: "GET" }, false);
 
-export const checkVote = async (electionId) => {
-  const token = localStorage.getItem("token");
-
-  const res = await fetch(`${API_URL}/api/vote/check/${electionId}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+export const createElection = (data) =>
+  request(`${API_URL}/admin/elections`, {
+    method: "POST",
+    body: JSON.stringify(data),
   });
 
-  const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data.message || "Failed to check vote");
-  }
-
-  return data;
-};
-
-//////////////////////////////////////////
-// ADMIN
-//////////////////////////////////////////
-
-export const getAdminElections = async () => {
-  const token = localStorage.getItem("token");
-
-  const res = await fetch(`${API_URL}/api/admin/elections`, {
-    headers: { Authorization: `Bearer ${token}` },
+export const updateElection = (id, data) =>
+  request(`${API_URL}/admin/elections/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
   });
 
-  if (!res.ok) throw new Error("Failed to fetch elections");
+export const deleteElection = (id) =>
+  request(`${API_URL}/admin/elections/${id}`, { method: "DELETE" });
 
-  return res.json();
-};
+export const startElection = (id) =>
+  request(`${API_URL}/admin/elections/${id}/start`, { method: "PUT" });
+
+export const endElection = (id) =>
+  request(`${API_URL}/admin/elections/${id}/end`, { method: "PUT" });
+
+//////////////////////////////////////////
+// ADMIN - POSITIONS
+//////////////////////////////////////////
+export const getPositions = () =>
+  request(`${API_URL}/admin/positions`, { method: "GET" }, false);
+
+// Backward-compatible alias for AdminDashboard
+export const getAdminPositions = getPositions;
+
+export const createPosition = (data) =>
+  request(`${API_URL}/admin/positions`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
+export const updatePosition = (id, data) =>
+  request(`${API_URL}/admin/positions/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+
+export const deletePosition = (id) =>
+  request(`${API_URL}/admin/positions/${id}`, { method: "DELETE" });
+
+//////////////////////////////////////////
+// ADMIN - CANDIDATES
+//////////////////////////////////////////
+export const getCandidates = () =>
+  request(`${API_URL}/admin/candidates`, { method: "GET" }, false);
+
+// Backward-compatible alias for AdminDashboard
+export const getAdminCandidates = getCandidates;
+
+export const createCandidate = (formData) =>
+  request(`${API_URL}/admin/candidates`, {
+    method: "POST",
+    body: formData,
+  }, false);
+
+export const updateCandidate = (id, formData) =>
+  request(`${API_URL}/admin/candidates/${id}`, {
+    method: "PUT",
+    body: formData,
+  }, false);
+
+export const deleteCandidate = (id) =>
+  request(`${API_URL}/admin/candidates/${id}`, { method: "DELETE" });

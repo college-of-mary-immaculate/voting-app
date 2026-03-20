@@ -3,6 +3,11 @@ import AdminLayout from "./AdminLayout";
 import Elections from "./Elections";
 import Positions from "./Positions";
 import Candidates from "./Candidates";
+import {
+  getAdminElections,
+  getAdminPositions,
+  getAdminCandidates,
+} from "../../api/api";
 import "./AdminLayout.css";
 
 function AdminDashboard() {
@@ -11,24 +16,18 @@ function AdminDashboard() {
   const [candidates, setCandidates] = useState([]);
   const [refreshCounter, setRefreshCounter] = useState(0);
 
-  const token = localStorage.getItem("token");
-
   const fetchAllData = async () => {
     try {
-      const resE = await fetch("http://localhost:3000/api/admin/elections", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setElections(await resE.json());
+      const [electionsData, positionsData, candidatesData] =
+        await Promise.all([
+          getAdminElections(),
+          getAdminPositions(),
+          getAdminCandidates(),
+        ]);
 
-      const resP = await fetch("http://localhost:3000/api/admin/positions", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setPositions(await resP.json());
-
-      const resC = await fetch("http://localhost:3000/api/admin/candidates", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setCandidates(await resC.json());
+      setElections(electionsData);
+      setPositions(positionsData);
+      setCandidates(candidatesData);
     } catch (err) {
       console.error("Error fetching data:", err);
     }
@@ -45,9 +44,18 @@ function AdminDashboard() {
       {/* Dashboard stats */}
       <div id="dashboard" className="admin-section">
         <h2 className="section-heading">Admin Dashboard</h2>
-        <div className="dashboard-card">Total Elections: {elections.length}</div>
-        <div className="dashboard-card">Total Positions: {positions.length}</div>
-        <div className="dashboard-card">Total Candidates: {candidates.length}</div>
+
+        <div className="dashboard-card">
+          Total Elections: {elections.length}
+        </div>
+
+        <div className="dashboard-card">
+          Total Positions: {positions.length}
+        </div>
+
+        <div className="dashboard-card">
+          Total Candidates: {candidates.length}
+        </div>
       </div>
 
       {/* Elections Section */}

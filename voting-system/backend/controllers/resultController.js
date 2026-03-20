@@ -1,10 +1,10 @@
 const db = require("../config/db");
 
-exports.getResults = (req, res) => {
+exports.getResults = async (req, res) => {
   const election_id = req.params.electionId;
 
   const sql = `
-    SELECT 
+    SELECT
       c.id AS candidate_id,
       c.name AS candidate,
       c.position_id,
@@ -18,9 +18,11 @@ exports.getResults = (req, res) => {
     ORDER BY p.id
   `;
 
-  db.query(sql, [election_id, election_id], (err, result) => {
-    if (err) return res.status(500).json(err);
-
+  try {
+    const result = await db.read(sql, [election_id, election_id]);
     res.json(result);
-  });
+  } catch (err) {
+    console.error("Get results error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 };

@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const voteController = require("../controllers/voteController"); // should be the object above
+const voteController = require("../controllers/voteController");
 const authenticateToken = require("../middleware/authMiddleware");
 
 router.post("/", authenticateToken, voteController.vote);

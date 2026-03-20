@@ -1,6 +1,6 @@
 const db = require("../config/db");
 
-exports.getPositions = (req, res) => {
+exports.getPositions = async (req, res) => {
   const electionId = req.query.election_id;
   let sql = `
     SELECT p.id, p.name, p.election_id, e.title AS election_title
@@ -14,39 +14,51 @@ exports.getPositions = (req, res) => {
     params.push(electionId);
   }
 
-  db.query(sql, params, (err, results) => {
-    if (err) return res.status(500).json(err);
+  try {
+    const results = await db.read(sql, params);
     res.json(results);
-  });
+  } catch (err) {
+    console.error("Get positions error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 };
 
-exports.addPosition = (req, res) => {
+exports.addPosition = async (req, res) => {
   const { name, election_id } = req.body;
   if (!name || !election_id) return res.status(400).json({ message: "Name and election required" });
 
   const sql = "INSERT INTO positions (name, election_id) VALUES (?, ?)";
-  db.query(sql, [name, election_id], (err) => {
-    if (err) return res.status(500).json(err);
+  try {
+    await db.write(sql, [name, election_id]);
     res.json({ message: "Position added" });
-  });
+  } catch (err) {
+    console.error("Add position error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 };
 
-exports.updatePosition = (req, res) => {
+exports.updatePosition = async (req, res) => {
   const { name, election_id } = req.body;
   const id = req.params.id;
 
   const sql = "UPDATE positions SET name=?, election_id=? WHERE id=?";
-  db.query(sql, [name, election_id, id], (err) => {
-    if (err) return res.status(500).json(err);
+  try {
+    await db.write(sql, [name, election_id, id]);
     res.json({ message: "Position updated" });
-  });
+  } catch (err) {
+    console.error("Update position error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 };
 
-exports.deletePosition = (req, res) => {
+exports.deletePosition = async (req, res) => {
   const id = req.params.id;
   const sql = "DELETE FROM positions WHERE id=?";
-  db.query(sql, [id], (err) => {
-    if (err) return res.status(500).json(err);
+  try {
+    await db.write(sql, [id]);
     res.json({ message: "Position deleted" });
-  });
+  } catch (err) {
+    console.error("Delete position error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 };

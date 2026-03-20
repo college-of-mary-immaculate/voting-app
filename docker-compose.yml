@@ -1,1 +1,126 @@
+version: "3.9"
 
+services:
+  # ================= REDIS =================
+  redis:
+    image: redis:7
+    container_name: redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+
+  # ================= MYSQL MASTER =================
+  db-master:
+    image: mysql:8.4
+    container_name: db-master
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: voting_system
+    command: >
+      --server-id=1
+      --log-bin=mysql-bin
+      --binlog-format=ROW
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+      --log-replica-updates=ON
+    ports:
+      - "3306:3306"
+    volumes:
+      - db-master-data:/var/lib/mysql
+      - ./database/master-init.sql:/docker-entrypoint-initdb.d/master-init.sql
+      - ./database/voting_system.sql:/docker-entrypoint-initdb.d/voting_system.sql
+
+  # ================= MYSQL SLAVE 1 =================
+  db-slave1:
+    image: mysql:8.4
+    container_name: db-slave1
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+    command: >
+      --server-id=2
+      --relay-log=relay-log
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+      --log-replica-updates=ON
+    depends_on:
+      - db-master
+    volumes:
+      - db-slave1-data:/var/lib/mysql
+      - ./database/slave-init.sh:/docker-entrypoint-initdb.d/slave-init.sh
+
+  # ================= MYSQL SLAVE 2 =================
+  db-slave2:
+    image: mysql:8.4
+    container_name: db-slave2
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+    command: >
+      --server-id=3
+      --relay-log=relay-log
+      --gtid-mode=ON
+      --enforce-gtid-consistency=ON
+      --log-replica-updates=ON
+    depends_on:
+      - db-master
+    volumes:
+      - db-slave2-data:/var/lib/mysql
+      - ./database/slave-init.sh:/docker-entrypoint-initdb.d/slave-init.sh
+
+  # ================= BACKENDS =================
+  backend1:
+    build: ./voting-system/backend
+    ports:
+      - "5001:5000"
+    env_file: .env
+    depends_on:
+      - redis
+      - db-master
+    volumes:
+      - uploads-data:/app/uploads
+
+  backend2:
+    build: ./voting-system/backend
+    ports:
+      - "5002:5000"
+    env_file: .env
+    depends_on:
+      - redis
+      - db-master
+    volumes:
+      - uploads-data:/app/uploads
+
+  backend3:
+    build: ./voting-system/backend
+    ports:
+      - "5003:5000"
+    env_file: .env
+    depends_on:
+      - redis
+      - db-master
+    volumes:
+      - uploads-data:/app/uploads
+
+  # ================= NGINX =================
+  nginx:
+    build:
+      context: ./voting-system
+      dockerfile: nginx/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend1
+      - backend2
+      - backend3
+
+# ================= VOLUMES =================
+volumes:
+  redis-data:
+  db-master-data:
+  db-slave1-data:
+  db-slave2-data:
+  uploads-data:

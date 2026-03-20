@@ -1,0 +1,9 @@
+CREATE DATABASE IF NOT EXISTS voting_system;
+USE voting_system;
+
+CREATE USER IF NOT EXISTS 'replica'@'%'
+IDENTIFIED BY 'replica_pass';
+
+GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'replica'@'%';
+
+FLUSH PRIVILEGES;

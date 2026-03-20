@@ -1,13 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import {
+  createElection,
+  updateElection,
+  deleteElection,
+  startElection,
+  endElection,
+} from "../../api/api";
+import { getSocket, emitWhenConnected } from "../../api/socket";
 
 function Elections({ elections, refresh }) {
   const [title, setTitle] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [editId, setEditId] = useState(null);
+  const [socketStatus, setSocketStatus] = useState("Disconnected");
 
-  const token = localStorage.getItem("token");
+  const socket = getSocket();
 
+  // ---------- Helpers ----------
   const getStatus = (start, end) => {
     const now = new Date();
     const startD = new Date(start);
@@ -19,6 +29,17 @@ function Elections({ elections, refresh }) {
     return "Unknown";
   };
 
+  const formatDateTime = (date) => {
+    if (!date) return "";
+    const d = new Date(date);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+      d.getHours()
+    )}:${pad(d.getMinutes())}`;
+  };
+
+  const toMySQLDateTime = (value) => (value ? value.replace("T", " ") + ":00" : null);
+
   const resetForm = () => {
     setTitle("");
     setStartDate("");
@@ -26,139 +47,116 @@ function Elections({ elections, refresh }) {
     setEditId(null);
   };
 
+  // ---------- Handlers ----------
   const handleAddOrUpdate = async () => {
-    if (!title || !startDate || !endDate) {
-      return alert("Please fill all fields");
+    if (!title || !startDate || !endDate) return alert("Please fill all fields");
+
+    const payload = {
+      title,
+      start_date: toMySQLDateTime(startDate),
+      end_date: toMySQLDateTime(endDate),
+    };
+
+    try {
+      if (editId) await updateElection(editId, payload);
+      else await createElection(payload);
+
+      alert("Success");
+      resetForm();
+      refresh();
+      emitWhenConnected("election_update");
+    } catch (err) {
+      alert(err.message);
     }
-
-    const url = editId
-      ? `http://localhost:3000/api/admin/elections/${editId}`
-      : "http://localhost:3000/api/admin/elections";
-
-    const method = editId ? "PUT" : "POST";
-
-    const res = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        title,
-        start_date: startDate,
-        end_date: endDate,
-      }),
-    });
-
-    const data = await res.json();
-    alert(data.message);
-
-    resetForm();
-    refresh();
   };
 
   const handleEdit = (election) => {
     setEditId(election.id);
     setTitle(election.title);
-    setStartDate(election.start_date);
-    setEndDate(election.end_date);
+    setStartDate(formatDateTime(election.start_date));
+    setEndDate(formatDateTime(election.end_date));
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this election?")) return;
-
-    const res = await fetch(
-      `http://localhost:3000/api/admin/elections/${id}`,
-      {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
-    const data = await res.json();
-    alert(data.message);
-    refresh();
-  };
-
-  const handleEndElection = async (election) => {
-    if (!window.confirm("End this election now?")) return;
-
-    const res = await fetch(
-      `http://localhost:3000/api/admin/elections/${election.id}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: election.title,
-          start_date: election.start_date,
-          end_date: new Date().toISOString(),
-        }),
-      }
-    );
-
-    const data = await res.json();
-    alert(data.message);
-    refresh();
+    try {
+      await deleteElection(id);
+      alert("Deleted");
+      refresh();
+      emitWhenConnected("election_update");
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   const handleStartElection = async (election) => {
     if (!window.confirm("Start this election now?")) return;
-
-    const res = await fetch(
-      `http://localhost:3000/api/admin/elections/${election.id}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: election.title,
-          start_date: new Date().toISOString(),
-          end_date: election.end_date,
-        }),
-      }
-    );
-
-    const data = await res.json();
-    alert(data.message);
-    refresh();
+    try {
+      await startElection(election.id);
+      alert("Election started");
+      refresh();
+      emitWhenConnected("election_started", { electionId: election.id });
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
+  const handleEndElection = async (election) => {
+    if (!window.confirm("End this election now?")) return;
+    try {
+      await endElection(election.id);
+      alert("Election ended");
+      refresh();
+      emitWhenConnected("election_ended", { electionId: election.id });
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  // ---------- Socket Listeners ----------
+  useEffect(() => {
+    if (!socket.connected) socket.connect();
+
+    const refreshHandler = () => refresh();
+
+    socket.on("election_update", refreshHandler);
+    socket.on("election_started", refreshHandler);
+    socket.on("election_ended", refreshHandler);
+
+    socket.on("connect", () => setSocketStatus("Connected"));
+    socket.on("disconnect", () => setSocketStatus("Disconnected"));
+
+    return () => {
+      socket.off("election_update", refreshHandler);
+      socket.off("election_started", refreshHandler);
+      socket.off("election_ended", refreshHandler);
+      socket.off("connect");
+      socket.off("disconnect");
+    };
+  }, [refresh, socket]);
+
+  // ---------- Render ----------
   return (
     <div>
-
       <div style={{ marginBottom: "15px" }}>
+        <div>Socket status: {socketStatus}</div>
         <input
           placeholder="Election Title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-
         <input
-          type="date"
+          type="datetime-local"
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
         />
-
         <input
-          type="date"
+          type="datetime-local"
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
         />
-
-        <button className="btn btn-primary" onClick={handleAddOrUpdate}>
-          {editId ? "Update" : "Add"}
-        </button>
-
-        {editId && (
-          <button className="btn btn-delete" onClick={resetForm}>
-            Cancel
-          </button>
-        )}
+        <button onClick={handleAddOrUpdate}>{editId ? "Update" : "Add"}</button>
+        {editId && <button onClick={resetForm}>Cancel</button>}
       </div>
 
       <table>
@@ -171,67 +169,27 @@ function Elections({ elections, refresh }) {
             <th>Actions</th>
           </tr>
         </thead>
-
         <tbody>
           {elections.map((e) => {
             const status = getStatus(e.start_date, e.end_date);
-
             return (
               <tr key={e.id}>
-                <td data-label="Title">{e.title}</td>
-
-                <td data-label="Start">
-                  {new Date(e.start_date).toLocaleString()}
-                </td>
-
-                <td data-label="End">
-                  {new Date(e.end_date).toLocaleString()}
-                </td>
-
-                <td data-label="Status">
-                  <span className={`status ${status.toLowerCase()}`}>
-                    {status}
-                  </span>
-                </td>
-
-                <td data-label="Actions">
+                <td>{e.title}</td>
+                <td>{new Date(e.start_date).toLocaleString()}</td>
+                <td>{new Date(e.end_date).toLocaleString()}</td>
+                <td>{status}</td>
+                <td>
                   {status === "Upcoming" && (
                     <>
-                      <button
-                        className="btn btn-edit"
-                        onClick={() => handleEdit(e)}
-                      >
-                        ✏️ Edit
-                      </button>
-
-                      <button
-                        className="btn btn-delete"
-                        onClick={() => handleDelete(e.id)}
-                      >
-                        🗑 Delete
-                      </button>
-
-                      <button
-                        className="btn btn-start"
-                        onClick={() => handleStartElection(e)}
-                      >
-                        ▶ Start
-                      </button>
+                      <button onClick={() => handleEdit(e)}>Edit</button>
+                      <button onClick={() => handleDelete(e.id)}>Delete</button>
+                      <button onClick={() => handleStartElection(e)}>Start</button>
                     </>
                   )}
-
                   {status === "Ongoing" && (
-                    <button
-                      className="btn btn-end"
-                      onClick={() => handleEndElection(e)}
-                    >
-                      ⏹ End
-                    </button>
+                    <button onClick={() => handleEndElection(e)}>End</button>
                   )}
-
-                  {status === "Ended" && (
-                    <span style={{ color: "gray" }}>🔒 Closed</span>
-                  )}
+                  {status === "Ended" && <span>Closed</span>}
                 </td>
               </tr>
             );
