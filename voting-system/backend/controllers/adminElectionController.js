@@ -1,6 +1,14 @@
 const db = require("../config/db");
 const { pub } = require("../config/redis");
 
+const formatDate = (date) => {
+  if (!date) return null;
+  const d = new Date(date);
+  const month = `${d.getMonth() + 1}`.padStart(2, '0');
+  const day = `${d.getDate()}`.padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
+};
+
 exports.getElections = (req, res) => {
   const sql = "SELECT * FROM elections ORDER BY id DESC";
 
@@ -26,7 +34,7 @@ exports.addElection = (req, res) => {
 
   db.query(
     sql,
-    [title, description || "", start_date, end_date, status || "upcoming"],
+    [title, description || "", formatDate(start_date), formatDate(end_date), status || "upcoming"],
     async (err, result) => {
       if (err) return res.status(500).json(err);
 
@@ -64,9 +72,10 @@ exports.updateElection = (req, res) => {
 
   db.query(
     sql,
-    [title, description || "", start_date, end_date, status || null, id],
+    [title, description || "", formatDate(start_date), formatDate(end_date), status || null, id],
     async (err) => {
       if (err) return res.status(500).json(err);
+
       await pub.publish(
         "election_updates",
         JSON.stringify({

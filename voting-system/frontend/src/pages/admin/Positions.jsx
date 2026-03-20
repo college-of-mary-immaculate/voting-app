@@ -1,11 +1,10 @@
 import { useState } from "react";
+import { addPosition, updatePosition, deletePosition } from "../../api/api";
 
 function Positions({ positions, elections, refresh }) {
   const [name, setName] = useState("");
   const [electionId, setElectionId] = useState("");
   const [editId, setEditId] = useState(null);
-
-  const token = localStorage.getItem("token");
 
   const getStatus = (start, end) => {
     const now = new Date();
@@ -24,33 +23,21 @@ function Positions({ positions, elections, refresh }) {
   };
 
   const handleAddOrUpdate = async () => {
-    if (!name || !electionId) {
-      return alert("Please fill all fields");
+    if (!name || !electionId) return alert("Please fill all fields");
+
+    try {
+      if (editId) {
+        await updatePosition(editId, { name, election_id: electionId });
+        alert("Position updated");
+      } else {
+        await addPosition({ name, election_id: electionId });
+        alert("Position added");
+      }
+      resetForm();
+      refresh();
+    } catch (err) {
+      alert(err.message);
     }
-
-    const url = editId
-      ? `http://localhost:3000/api/admin/positions/${editId}`
-      : "http://localhost:3000/api/admin/positions";
-
-    const method = editId ? "PUT" : "POST";
-
-    const res = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        name,
-        election_id: electionId,
-      }),
-    });
-
-    const data = await res.json();
-    alert(data.message);
-
-    resetForm();
-    refresh();
   };
 
   const handleEdit = (p) => {
@@ -61,23 +48,17 @@ function Positions({ positions, elections, refresh }) {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this position?")) return;
-
-    const res = await fetch(
-      `http://localhost:3000/api/admin/positions/${id}`,
-      {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
-    const data = await res.json();
-    alert(data.message);
-    refresh();
+    try {
+      await deletePosition(id);
+      alert("Position deleted");
+      refresh();
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   return (
     <div>
-
       <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "15px" }}>
         <input
           placeholder="Position Name"
@@ -85,10 +66,7 @@ function Positions({ positions, elections, refresh }) {
           onChange={(e) => setName(e.target.value)}
         />
 
-        <select
-          value={electionId}
-          onChange={(e) => setElectionId(e.target.value)}
-        >
+        <select value={electionId} onChange={(e) => setElectionId(e.target.value)}>
           <option value="">Select Election</option>
           {elections.map((e) => {
             const status = getStatus(e.start_date, e.end_date);
@@ -120,49 +98,22 @@ function Positions({ positions, elections, refresh }) {
             <th>Actions</th>
           </tr>
         </thead>
-
         <tbody>
           {positions.map((p) => {
-            const election = elections.find(
-              (e) => e.id === p.election_id
-            );
-
-            const status = election
-              ? getStatus(election.start_date, election.end_date)
-              : "Unknown";
-
+            const election = elections.find((e) => e.id === p.election_id);
+            const status = election ? getStatus(election.start_date, election.end_date) : "Unknown";
             const editable = status === "Upcoming";
 
             return (
               <tr key={p.id}>
                 <td data-label="Name">{p.name}</td>
-
-                <td data-label="Election">
-                  {election?.title || "Unknown"}
-                </td>
-
-                <td data-label="Status">
-                  <span className={`status ${status.toLowerCase()}`}>
-                    {status}
-                  </span>
-                </td>
-
+                <td data-label="Election">{election?.title || "Unknown"}</td>
+                <td data-label="Status"><span className={`status ${status.toLowerCase()}`}>{status}</span></td>
                 <td data-label="Actions">
                   {editable ? (
                     <>
-                      <button
-                        className="btn btn-edit"
-                        onClick={() => handleEdit(p)}
-                      >
-                        ✏️ Edit
-                      </button>
-
-                      <button
-                        className="btn btn-delete"
-                        onClick={() => handleDelete(p.id)}
-                      >
-                        🗑 Delete
-                      </button>
+                      <button className="btn btn-edit" onClick={() => handleEdit(p)}>✏️ Edit</button>
+                      <button className="btn btn-delete" onClick={() => handleDelete(p.id)}>🗑 Delete</button>
                     </>
                   ) : (
                     <span style={{ color: "gray" }}>🔒 Locked</span>

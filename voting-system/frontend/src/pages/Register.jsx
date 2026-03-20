@@ -13,7 +13,7 @@ function Register() {
     const data = await register(name, email, password);
     if (data.message?.toLowerCase().includes("success")) {
       alert("Registration successful");
-      navigate("/login");
+      navigate("/");
     } else {
       alert(data.message || "Registration failed");
     }

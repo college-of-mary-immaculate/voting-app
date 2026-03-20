@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import {
   getElections,
-  getCandidatesByElection,
   voteCandidate,
-  checkVote
+  getElectionData,
+  getElectionStatus
 } from "../api/api";
 import socket from "../api/socket";
 import "./Vote.css";
@@ -15,8 +15,10 @@ export default function Vote() {
   const [loading, setLoading] = useState(false);
   const [voting, setVoting] = useState(false);
   const [votedPositions, setVotedPositions] = useState({});
-  const [timeRemaining, setTimeRemaining] = useState("");
 
+  //////////////////////////////////////////
+  // LOAD ELECTIONS
+  //////////////////////////////////////////
   useEffect(() => {
     const load = async () => {
       const data = await getElections();
@@ -32,6 +34,9 @@ export default function Vote() {
     load();
   }, []);
 
+  //////////////////////////////////////////
+  // SOCKET: ELECTION UPDATE
+  //////////////////////////////////////////
   useEffect(() => {
     const handler = async () => {
       const updated = await getElections();
@@ -48,6 +53,9 @@ export default function Vote() {
     return () => socket.off("election_update", handler);
   }, [selectedElection]);
 
+  //////////////////////////////////////////
+  // LOAD CANDIDATES + VOTE STATUS
+  //////////////////////////////////////////
   useEffect(() => {
     if (!selectedElection) {
       setCandidates([]);
@@ -57,23 +65,17 @@ export default function Vote() {
 
     setLoading(true);
 
-    Promise.all([
-      getCandidatesByElection(selectedElection.id),
-      checkVote(selectedElection.id)
-    ])
-      .then(([candData, voteData]) => {
-        setCandidates(candData);
-
-        const voteMap = {};
-        voteData.votedPositions.forEach(id => {
-          voteMap[id] = true;
-        });
-
-        setVotedPositions(voteMap);
+    getElectionData(selectedElection.id)
+      .then(({ candidates, votedPositions }) => {
+        setCandidates(candidates);
+        setVotedPositions(votedPositions);
       })
       .finally(() => setLoading(false));
   }, [selectedElection]);
 
+  //////////////////////////////////////////
+  // SOCKET: CANDIDATE UPDATE
+  //////////////////////////////////////////
   useEffect(() => {
     if (!selectedElection) return;
 
@@ -111,31 +113,9 @@ export default function Vote() {
     return () => socket.off("candidate_update", handler);
   }, [selectedElection]);
 
-  useEffect(() => {
-    if (!selectedElection) return;
-
-    const interval = setInterval(() => {
-      const now = new Date();
-      const start = new Date(selectedElection.start_date);
-      const end = new Date(selectedElection.end_date);
-
-      if (now < start) {
-        setTimeRemaining(`Upcoming: starts ${start.toLocaleString()}`);
-      } else if (now <= end) {
-        const diff = end - now;
-        const h = Math.floor(diff / 1000 / 60 / 60);
-        const m = Math.floor((diff / 1000 / 60) % 60);
-        const s = Math.floor((diff / 1000) % 60);
-
-        setTimeRemaining(`Active: ${h}h ${m}m ${s}s remaining`);
-      } else {
-        setTimeRemaining("Ended");
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [selectedElection]);
-
+  //////////////////////////////////////////
+  // GROUP BY POSITION
+  //////////////////////////////////////////
   const grouped = candidates.reduce((acc, c) => {
     const pos = c.position_title || "Unknown Position";
     if (!acc[pos]) acc[pos] = [];
@@ -143,11 +123,17 @@ export default function Vote() {
     return acc;
   }, {});
 
+  //////////////////////////////////////////
+  // CHECK ACTIVE
+  //////////////////////////////////////////
   const isActive = (e) =>
     e &&
     new Date() >= new Date(e.start_date) &&
     new Date() <= new Date(e.end_date);
 
+  //////////////////////////////////////////
+  // HANDLE VOTE
+  //////////////////////////////////////////
   const handleVote = async (c) => {
     if (!isActive(selectedElection)) return;
     if (votedPositions[c.position_id]) return;
@@ -166,12 +152,16 @@ export default function Vote() {
     }
   };
 
+  //////////////////////////////////////////
+  // UI
+  //////////////////////////////////////////
   return (
     <div className="vote-page page-section">
       <div className="vote-container container">
         <h1>Cast Your Vote</h1>
         <p>Select an election and view candidates.</p>
 
+        {/* Election Select */}
         <div className="election-select-card card">
           <label>Select Election</label>
           <select
@@ -191,14 +181,21 @@ export default function Vote() {
           </select>
         </div>
 
+        {/* Status */}
         {selectedElection && (
           <div className="election-status-card card">
-            <strong>Status:</strong> {timeRemaining}
+            <strong>Status:</strong>{" "}
+            {getElectionStatus(
+              selectedElection.start_date,
+              selectedElection.end_date
+            )}
           </div>
         )}
 
+        {/* Loading */}
         {loading && <div>Loading candidates...</div>}
 
+        {/* Candidates */}
         {!loading &&
           Object.keys(grouped).map(pos => (
             <div key={pos} className="position-card card">

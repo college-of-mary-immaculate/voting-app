@@ -16,11 +16,11 @@ const initSubscriber = (io) => {
       }
 
       if (channel === "election_updates") {
-        io.emit("election_update", data);
+        io.emit("election_updated", data);
       }
 
       if (channel === "candidate_updates") {
-        io.emit("candidate_update", data);
+        io.emit("candidate_updated", data);
       }
 
     } catch (err) {
